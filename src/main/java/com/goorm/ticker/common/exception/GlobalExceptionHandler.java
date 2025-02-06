@@ -1,5 +1,6 @@
 package com.goorm.ticker.common.exception;
 
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -28,5 +29,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity
             .status(ex.getErrorCode().getStatus())
             .body(ex.getErrorCode().getMessage());
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<?> handleInvalidDataAccessApiUsageException(InvalidDataAccessApiUsageException ex) {
+        return ResponseEntity
+            .status(ErrorCode.SESSION_EXPIRED.getStatus())
+            .body(ErrorCode.SESSION_EXPIRED.getMessage());
     }
 }
