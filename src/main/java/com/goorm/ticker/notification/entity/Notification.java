@@ -2,6 +2,7 @@ package com.goorm.ticker.notification.entity;
 
 import com.goorm.ticker.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "notification")
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 public class Notification extends BaseTimeEntity {
 
     @Id
@@ -29,19 +31,4 @@ public class Notification extends BaseTimeEntity {
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
-
-    public static Notification createNotification(Long userId, String message, NotificationType type) {
-        Notification notification = new Notification();
-        notification.userId = userId;
-        notification.message = message;
-        notification.type = type;
-        notification.isRead = false;
-        return notification;
-    }
-
-    public void markAsRead() {
-        if (!this.isRead) {
-            this.isRead = true;
-        }
-    }
 }
