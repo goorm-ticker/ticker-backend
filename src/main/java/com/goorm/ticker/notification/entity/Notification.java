@@ -1,6 +1,7 @@
 package com.goorm.ticker.notification.entity;
 
 import com.goorm.ticker.common.entity.BaseTimeEntity;
+import com.goorm.ticker.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,9 +19,9 @@ public class Notification extends BaseTimeEntity {
     @Column(name = "notification_id")
     private Long id;
 
-    // 추후에 User 관계 매핑 예정
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "message", nullable = false)
     private String message;
@@ -31,4 +32,10 @@ public class Notification extends BaseTimeEntity {
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
+
+    public void markAsRead() {
+        if (!this.isRead) {
+            this.isRead = true;
+        }
+    }
 }
