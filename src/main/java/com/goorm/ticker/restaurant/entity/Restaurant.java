@@ -6,21 +6,17 @@ import java.util.List;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "restaurants")
 public class Restaurant {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "restaurant_id")
 	private Long restaurantId;
 
@@ -38,5 +34,16 @@ public class Restaurant {
 
 	@OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<ReservationSlot> reservationSlots = new ArrayList<>();
+
+	@Builder
+	public Restaurant(Long restaurantId, String restaurantName, String x, String y, Integer maxWaiting){
+		this.restaurantId = restaurantId;
+		this.restaurantName  = restaurantName;
+		this.x = x;
+		this.y = y;
+		this.maxWaiting = maxWaiting;
+	}
+
+
 
 }
