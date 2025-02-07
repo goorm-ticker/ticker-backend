@@ -27,13 +27,14 @@ public class ReservationCreateRequest {
 	@Min(value = 1, message = "예약 인원은 최소 1명 이상이어야 합니다.")
 	private int partySize;
 
-	public static ReservationCreateRequest of(Long userId, Long restaurantId, LocalTime slotTime,
+	public static ReservationCreateRequest of(Long userId, Long restaurantId, LocalTime reservationTime,
 		LocalDate reservationDate,
 		int partySize) {
 		ReservationCreateRequest request = new ReservationCreateRequest();
 		request.userId = userId;
 		request.restaurantId = restaurantId;
 		request.reservationDate = reservationDate;
+		request.reservationTime = reservationTime;
 		request.partySize = partySize;
 		return request;
 	}
