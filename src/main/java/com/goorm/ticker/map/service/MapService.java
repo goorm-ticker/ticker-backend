@@ -92,7 +92,7 @@ public class MapService {
         2. 식당 관련 맵을 하나 더 만들어서 관리 ( 맵 규모 2배로 커짐 ) - 매우 빠름
     */
     public void updateMap(Long restaurantId, int waiting){
-        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(()->new CustomException(ErrorCode.NOT_FOUND_RESTAURANT));
+        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(()->new CustomException(ErrorCode.RESTAURANT_NOT_FOUND));
         MapUpdateDto mapUpdateDto = MapUpdateDto.builder().restaurantId(restaurantId).x(restaurant.getX()).y(restaurant.getY()).name(restaurant.getRestaurantName()).waiting(waiting).build();
         /*
         갱신된 대기열에 대한 정보를 해당 음식점을 조회 중인 사용자를 전부 찾아 전달
