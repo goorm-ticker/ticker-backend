@@ -33,6 +33,10 @@ public class Notification extends BaseTimeEntity {
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
 
+    public static Notification createNotification(User user, String message, NotificationType type) {
+        return new Notification(null, user, message, type, false);
+    }
+
     public void markAsRead() {
         if (!this.isRead) {
             this.isRead = true;

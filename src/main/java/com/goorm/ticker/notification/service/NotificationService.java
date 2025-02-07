@@ -25,12 +25,10 @@ public class NotificationService {
     public void createNotification(NotificationRequest request) {
         User user = userRepository.findById(request.getUserId()).get();
 
-        Notification notification = new Notification(
-                null,
+        Notification notification = Notification.createNotification(
                 user,
                 request.getMessage(),
-                request.getType(),
-                false
+                request.getType()
         );
         notificationRepository.save(notification);
     }
@@ -55,7 +53,6 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 알림을 찾을 수 없습니다."));
         notification.markAsRead();
-        notificationRepository.save(notification);
     }
 
     @Transactional(readOnly = true)
