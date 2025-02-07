@@ -72,4 +72,68 @@ public class ReservationService {
 			.status(reservation.getStatus())
 			.build();
 	}
+
+	@Transactional
+	public ReservationCreateResponse updateReservation(Long reservationId, String status) {
+		// 예약 조회
+		Reservation reservation = reservationRepository.findById(reservationId)
+			.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+		// 예약 상태 확인
+		ReservationStatus newStatus;
+		try {
+			newStatus = ReservationStatus.valueOf(status.toUpperCase());
+		} catch (IllegalArgumentException e) {
+			throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+		}
+
+		if (reservation.getStatus() == newStatus || reservation.getStatus() == ReservationStatus.COMPLETED
+			|| reservation.getStatus() == ReservationStatus.CANCELLED) {
+			throw new CustomException(ErrorCode.RESERVATION_ALREADY_UPDATED);
+		}
+
+		// 예약 상태 업데이트
+		switch (newStatus) {
+			case CANCELLED -> handleCancellation(reservation);
+			case COMPLETED -> handleCompletion(reservation);
+			case CONFIRMED -> handleConfirmation(reservation);
+			default -> throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+		}
+
+		return ReservationCreateResponse.builder()
+			.reservationId(reservation.getReservationId())
+			.restaurantName(reservation.getRestaurant().getRestaurantName())
+			.username(reservation.getUser().getName())
+			.reservationDate(reservation.getReservationDate())
+			.reservationTime(reservation.getReservationSlot().getSlotTime())
+			.partySize(reservation.getPartySize())
+			.status(reservation.getStatus())
+			.build();
+	}
+
+	// 예약 취소 처리
+	private void handleCancellation(Reservation reservation) {
+		if (reservation.getStatus() == ReservationStatus.WAITING) {
+			reservation.updateStatus(ReservationStatus.CANCELLED);
+		} else if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+			reservation.updateStatus(ReservationStatus.CANCELLED);
+			ReservationSlot slot = reservation.getReservationSlot();
+			slot.updateAvailablePartySize(slot.getAvailablePartySize() + reservation.getPartySize());
+		}
+	}
+
+	// 예약 완료 처리
+	private void handleCompletion(Reservation reservation) {
+		reservation.updateStatus(ReservationStatus.COMPLETED);
+	}
+
+	// 예약 확정 처리
+	private void handleConfirmation(Reservation reservation) {
+		ReservationSlot slot = reservation.getReservationSlot();
+		if (slot.getAvailablePartySize() < reservation.getPartySize()) {
+			throw new CustomException(ErrorCode.PARTY_SIZE_EXCEEDED);
+		}
+		reservation.updateStatus(ReservationStatus.CONFIRMED);
+		slot.updateAvailablePartySize(slot.getAvailablePartySize() - reservation.getPartySize());
+	}
 }
