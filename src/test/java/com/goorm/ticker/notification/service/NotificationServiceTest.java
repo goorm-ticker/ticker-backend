@@ -74,7 +74,7 @@ public class NotificationServiceTest {
     @Test
     @DisplayName("알림 읽음 처리한다.")
     void markAsReadTest() {
-        Notification notification = new Notification(null, testUser, "테스트 메시지", NotificationType.RESERVATION_CONFIRMATION, false);
+        Notification notification = Notification.createNotification(testUser, "테스트 메시지", NotificationType.RESERVATION_CONFIRMATION);
         notificationRepository.save(notification);
 
         notificationService.markAsRead(notification.getId());
