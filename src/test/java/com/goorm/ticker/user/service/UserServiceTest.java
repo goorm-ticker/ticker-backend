@@ -31,8 +31,8 @@ class UserServiceTest {
 		userRepository.deleteAll();
 	}
 
-	@DisplayName("이미 사용 중인 아이디로 회원가입 -> DUPLICATE_USERNAME 에러코드 예외 발생")
 	@Test
+	@DisplayName("이미 사용 중인 아이디로 회원가입 -> DUPLICATE_USERNAME 에러코드 예외 발생")
 	public void duplicatedLoginIdTest() {
 		// setup
 		final String testName = "testName";
@@ -59,8 +59,8 @@ class UserServiceTest {
 			});
 	}
 
-	@DisplayName("비밀번호 불일치 -> LOGIN_FAIL 에러코드 예외를 던진다.")
 	@Test
+	@DisplayName("비밀번호 불일치 -> LOGIN_FAIL 에러코드 예외를 던진다.")
 	public void passwordMatchTest() {
 		// setup
 		final String testName = "testName";
@@ -80,6 +80,7 @@ class UserServiceTest {
 			.password(testPassword + "1234")
 			.build();
 
+		// run & verify
 		Assertions.assertThatThrownBy(() -> userService.login(loginRequestDto))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
