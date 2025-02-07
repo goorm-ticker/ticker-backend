@@ -1,22 +1,22 @@
 package com.goorm.ticker.restaurant.entity;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 @Table(name = "restaurants")
 public class Restaurant {
 	@Id
@@ -36,7 +36,12 @@ public class Restaurant {
 	@Column(name = "max_waiting", nullable = false)
 	private Integer maxWaiting;
 
-	@OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<ReservationSlot> reservationSlots = new ArrayList<>();
-
+	public static Restaurant of(String restaurantName, String x, String y, Integer maxWaiting) {
+		return Restaurant.builder()
+			.restaurantName(restaurantName)
+			.x(x)
+			.y(y)
+			.maxWaiting(maxWaiting)
+			.build();
+	}
 }
