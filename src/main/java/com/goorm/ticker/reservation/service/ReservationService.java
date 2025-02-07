@@ -29,8 +29,7 @@ public class ReservationService {
 
 	@Transactional
 	public ReservationCreateResponse reserve(ReservationCreateRequest request) {
-		User user = userRepository.findById(request.getUserId())
-			.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
+
 		// 음식점 조회
 		Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
 			.orElseThrow(() -> new CustomException(ErrorCode.RESTAURANT_NOT_FOUND));
@@ -44,6 +43,9 @@ public class ReservationService {
 		if (slot.getAvailablePartySize() < request.getPartySize()) {
 			throw new CustomException(ErrorCode.PARTY_SIZE_EXCEEDED);
 		}
+
+		User user = userRepository.findById(request.getUserId())
+			.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
 		Reservation reservation = Reservation.of(
 			restaurant,
