@@ -14,7 +14,11 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
     open-in-view: false
-
+  firebase:
+    config-path: ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json
+  redis:
+    host: localhost
+    port: 6379
 server:
   servlet:
     session:
