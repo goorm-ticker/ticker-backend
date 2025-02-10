@@ -36,4 +36,13 @@ public class WaitList extends BaseTimeEntity {
     public void updateStatus(Status status) {
         this.status = status;
     }
+
+    public static WaitList createWaitList(User user, Restaurant restaurant, int newWaitingNumber) {
+        return WaitList.builder()
+                .user(user)
+                .restaurant(restaurant)
+                .waitingNumber(newWaitingNumber)
+                .status(Status.WAITING)
+                .build();
+    }
 }

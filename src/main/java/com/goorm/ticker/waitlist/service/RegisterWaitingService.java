@@ -39,7 +39,7 @@ public class RegisterWaitingService {
         int newWaitingNumber = getNextWaitingNumber(request);
 
         // 대기열 등록 및 저장
-        WaitList waitList = createWaitList(user, restaurant, newWaitingNumber);
+        WaitList waitList = WaitList.createWaitList(user, restaurant, newWaitingNumber);
         waitListRepository.save(waitList);
 
         return new WaitListResponseDto(waitList);
@@ -74,14 +74,5 @@ public class RegisterWaitingService {
     private int getNextWaitingNumber(WaitListRequestDto request) {
         Integer lastWaitingNumber = waitListRepository.findMaxWaitingNumberByRestaurantId(request.restaurantId());
         return (lastWaitingNumber == null) ? 1 : lastWaitingNumber + 1;
-    }
-
-    private static WaitList createWaitList(User user, Restaurant restaurant, int newWaitingNumber) {
-        return WaitList.builder()
-                .user(user)
-                .restaurant(restaurant)
-                .waitingNumber(newWaitingNumber)
-                .status(Status.WAITING)
-                .build();
     }
 }
