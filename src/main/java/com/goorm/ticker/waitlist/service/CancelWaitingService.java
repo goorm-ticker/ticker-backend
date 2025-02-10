@@ -8,6 +8,7 @@ import com.goorm.ticker.waitlist.repository.WaitListRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +17,7 @@ public class CancelWaitingService {
     private final WaitListRepository waitListRepository;
     private final HttpSession httpSession;
 
+    @Transactional
     public void cancelWaiting() {
         // 세션에서 사용자 ID 가져오기
         Long userId = getSessionUserId();
@@ -24,7 +26,6 @@ public class CancelWaitingService {
         WaitList waitList = findUserWaitingList(userId);
 
         waitList.updateStatus(Status.CANCELLED);
-        waitListRepository.save(waitList);
     }
 
     private Long getSessionUserId() {
