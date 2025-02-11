@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class UserWaitingPositionService {
+public class WaitingPositionService {
 
     private final WaitListRepository waitListRepository;
     private final HttpSession httpSession;
@@ -25,6 +25,11 @@ public class UserWaitingPositionService {
 
         // 앞의 대기 중인 사용자 수 반환
         return countUserAhead(userWaitList);
+    }
+
+    public long getTotalWaitingCount(Long restaurantId) {
+        // 식당에 총 대기중인 사용자 수 반환
+        return waitListRepository.countTotalWaitingByRestaurantId(restaurantId);
     }
 
     private Long getSessionUserId() {
