@@ -43,5 +43,12 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x ./gradlew
 
+      - name: Create Firebase config file
+        run: echo "${{ secrets.FIREBASE_JSON_CONTENT }}" > src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json
+
+      - name: Set Firebase config path
+        run: echo "FIREBASE_CONFIG_PATH=src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json" >> $GITHUB_ENV
+
+
       - name: Test with Gradle
         run: ./gradlew clean test
