@@ -220,6 +220,17 @@ public class WaitListControllerTest {
     }
 
     @Test
+    @DisplayName("총 대기인원 조회 성공 - 200 반환")
+    void getWaitingPosition_Success() throws Exception {
+        MockHttpServletResponse response = mockMvc.perform(get("/waitlist/{restaurantId}/totalWaiting", testRestaurantId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .session(session))
+                .andReturn().getResponse();
+
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.OK.value());
+    }
+
+    @Test
     @DisplayName("입장 완료 성공 - 200 반환")
     void completeWaiting_Success() throws Exception {
         WaitListRequestDto request = WaitListRequestDto.builder()

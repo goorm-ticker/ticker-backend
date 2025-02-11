@@ -19,7 +19,7 @@ public class WaitListController {
     private final RegisterWaitingService registerUserService;
     private final CompleteWaitingService completeWaitingService;
     private final CancelWaitingService cancelWaitingService;
-    private final UserWaitingPositionService userWaitingPositionService;
+    private final WaitingPositionService waitingPositionService;
 
     @Operation(summary = "대기 등록", description = "사용자를 대기열에 등록합니다.")
     @PostMapping
@@ -33,8 +33,17 @@ public class WaitListController {
     public ResponseEntity<Integer> getUserWaitingPosition(
             @Parameter(description = "조회할 식당 ID", required = true)
             @PathVariable("restaurantId") Long restaurantId) {
-        int position = userWaitingPositionService.getUserWaitingPosition(restaurantId);
+        int position = waitingPositionService.getUserWaitingPosition(restaurantId);
         return ResponseEntity.ok(position);
+    }
+
+    @Operation(summary = "총 대기 인원 조회", description = "식당에 현재 대기 인원을 반환합니다.")
+    @GetMapping("/{restaurantId}/totalWaiting")
+    public ResponseEntity<Long> getTotalWaiting(
+            @Parameter(description = "조회할 식당 ID", required = true)
+            @PathVariable("restaurantId") Long restaurantId) {
+        long totalWaiting = waitingPositionService.getTotalWaitingCount(restaurantId);
+        return ResponseEntity.ok(totalWaiting);
     }
 
     @Operation(summary = "입장 완료", description = "사용자의 대기 상태를 '입장 완료'로 변경합니다.")
