@@ -2,6 +2,8 @@ package com.goorm.ticker.restaurant.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -36,6 +38,7 @@ public class Restaurant {
 	@Column(name = "max_waiting", nullable = false)
 	private Integer maxWaiting;
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "reservation_policy", nullable = false)
 	private ReservationPolicy reservation_policy;
 
