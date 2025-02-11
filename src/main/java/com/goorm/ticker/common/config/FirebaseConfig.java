@@ -3,29 +3,29 @@ package com.goorm.ticker.common.config;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.InputStream;
 
 @Configuration
 public class FirebaseConfig {
 
-    @Value("${spring.firebase.config-path}")
-    private String firebaseConfigPath;
-
     @PostConstruct
-    public void initializeFirebase() throws IOException {
-        FileInputStream serviceAccount = new FileInputStream("src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json");
+    public void initializeFirebase() {
+        try {
+            InputStream serviceAccount = getClass().getClassLoader().getResourceAsStream("ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json");
+            if (serviceAccount == null) {
+                throw new RuntimeException("Firebase 서비스 계정 키 파일을 찾을 수 없습니다.");
+            }
 
-        FirebaseOptions options = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                .build();
+            FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build();
 
-        if (FirebaseApp.getApps().isEmpty()) {
             FirebaseApp.initializeApp(options);
+        } catch (Exception e) {
+            throw new RuntimeException("Firebase 초기화 중 오류 발생: " + e.getMessage(), e);
         }
     }
 }
