@@ -268,7 +268,7 @@ class ReservationServiceTest {
 		Long reservationId = reservationManual.getReservationId();
 
 		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservationManual));
-		
+
 		int initialAvailablePartySize = reservationSlotManual.getAvailablePartySize();
 		// When
 		ReservationCreateResponse response = reservationService.updateReservation(reservationId, "CANCELLED");
