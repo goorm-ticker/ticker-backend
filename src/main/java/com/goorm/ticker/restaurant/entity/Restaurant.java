@@ -40,7 +40,7 @@ public class Restaurant {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "reservation_policy", nullable = false)
-	private ReservationPolicy reservation_policy;
+	private ReservationPolicy reservationPolicy;
 
 	public static Restaurant of(String restaurantName, String x, String y, Integer maxWaiting,
 		ReservationPolicy reservationPolicy) {
@@ -49,7 +49,7 @@ public class Restaurant {
 			.x(x)
 			.y(y)
 			.maxWaiting(maxWaiting)
-			.reservation_policy(reservationPolicy)
+			.reservationPolicy(reservationPolicy)
 			.build();
 	}
 }
