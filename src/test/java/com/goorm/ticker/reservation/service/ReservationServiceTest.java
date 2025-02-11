@@ -51,31 +51,42 @@ class ReservationServiceTest {
 	@Mock
 	private UserRepository userRepository;
 
-	private Restaurant restaurant;
-	private Reservation reservation;
-	private ReservationSlot reservationSlot;
+	private Restaurant restaurantInstant;
+	private Restaurant restaurantManual;
+	private Reservation reservationInstant;
+	private Reservation reservationManual;
+	private ReservationSlot reservationSlotInstant;
+	private ReservationSlot reservationSlotManual;
 	private User user;
 
 	@BeforeEach
 	void setUp() {
 		MockitoAnnotations.openMocks(this);
-		restaurant = RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant();
-		reservationSlot = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurant);
+		restaurantInstant = RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant();
+		restaurantManual = RestaurantFixture.RESTAURANT_FIXTURE_2.createRestaurant();
+		reservationSlotInstant = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantInstant);
+		reservationSlotManual = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantManual);
 		user = UserFixture.USER_FIXTURE_1.createUser();
-		reservation = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurant, reservationSlot, user);
+		reservationInstant = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurantInstant,
+			reservationSlotInstant,
+			user);
+		reservationManual = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurantManual,
+			reservationSlotManual,
+			user);
 	}
 
-	@DisplayName("단일 예약을 성공합니다.")
+	@DisplayName("단일 예약을 성공합니다. -> 즉시 예약 확정 정책")
 	@Test
-	void testReserveSuccess() {
+	void testReserveSuccessInstant() {
 		// Given
 		ReservationCreateRequest request = ReservationCreateRequest.of(
-			user.getId(), restaurant.getRestaurantId(), reservationSlot.getSlotTime(), reservation.getReservationDate(),
-			reservation.getPartySize());
+			user.getId(), restaurantInstant.getRestaurantId(), reservationSlotInstant.getSlotTime(),
+			reservationInstant.getReservationDate(),
+			reservationInstant.getPartySize());
 
-		when(restaurantRepository.findById(request.getRestaurantId())).thenReturn(Optional.of(restaurant));
-		when(reservationSlotRepository.findBySlotTimeAndRestaurantId(
-			request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlot));
+		when(restaurantRepository.findById(request.getRestaurantId())).thenReturn(Optional.of(restaurantInstant));
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
+			request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlotInstant));
 		when(userRepository.findById(request.getUserId())).thenReturn(Optional.of(user));
 		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -85,11 +96,41 @@ class ReservationServiceTest {
 		// Then
 		assertSoftly(softly -> {
 			softly.assertThat(response).isNotNull();
-			softly.assertThat(response.getRestaurantName()).isEqualTo(restaurant.getRestaurantName());
+			softly.assertThat(response.getRestaurantName()).isEqualTo(restaurantInstant.getRestaurantName());
 			softly.assertThat(response.getUsername()).isEqualTo(user.getName());
 			softly.assertThat(response.getPartySize()).isEqualTo(request.getPartySize());
-			softly.assertThat(response.getReservationTime()).isEqualTo(reservationSlot.getSlotTime());
-			softly.assertThat(response.getStatus()).isEqualTo(ReservationStatus.WAITING);
+			softly.assertThat(response.getReservationTime()).isEqualTo(reservationSlotInstant.getSlotTime());
+			softly.assertThat(response.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+		});
+		verify(reservationRepository, times(1)).save(any(Reservation.class));
+	}
+
+	@DisplayName("단일 예약을 성공합니다. -> 수동 예약 확정 정책")
+	@Test
+	void testReserveSuccessManual() {
+		// Given
+		ReservationCreateRequest request = ReservationCreateRequest.of(
+			user.getId(), restaurantManual.getRestaurantId(), reservationSlotManual.getSlotTime(),
+			reservationManual.getReservationDate(),
+			reservationManual.getPartySize());
+
+		when(restaurantRepository.findById(request.getRestaurantId())).thenReturn(Optional.of(restaurantManual));
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
+			request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlotManual));
+		when(userRepository.findById(request.getUserId())).thenReturn(Optional.of(user));
+		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		// When
+		ReservationCreateResponse response = reservationService.reserve(request);
+
+		// Then
+		assertSoftly(softly -> {
+			softly.assertThat(response).isNotNull();
+			softly.assertThat(response.getRestaurantName()).isEqualTo(restaurantManual.getRestaurantName());
+			softly.assertThat(response.getUsername()).isEqualTo(user.getName());
+			softly.assertThat(response.getPartySize()).isEqualTo(request.getPartySize());
+			softly.assertThat(response.getReservationTime()).isEqualTo(reservationSlotManual.getSlotTime());
+			softly.assertThat(response.getStatus()).isEqualTo(ReservationStatus.PENDING);
 		});
 		verify(reservationRepository, times(1)).save(any(Reservation.class));
 	}
@@ -101,9 +142,9 @@ class ReservationServiceTest {
 		ReservationCreateRequest request = ReservationCreateRequest.of(
 			user.getId(),
 			999L,
-			reservationSlot.getSlotTime(),
-			reservation.getReservationDate(),
-			reservation.getPartySize()
+			reservationSlotInstant.getSlotTime(),
+			reservationInstant.getReservationDate(),
+			reservationInstant.getPartySize()
 		);
 
 		when(restaurantRepository.findById(request.getRestaurantId()))
@@ -130,15 +171,15 @@ class ReservationServiceTest {
 		// Given
 		ReservationCreateRequest request = ReservationCreateRequest.of(
 			user.getId(),
-			restaurant.getRestaurantId(),
-			reservationSlot.getSlotTime(),
-			reservation.getReservationDate(),
-			reservation.getPartySize()
+			restaurantInstant.getRestaurantId(),
+			reservationSlotInstant.getSlotTime(),
+			reservationInstant.getReservationDate(),
+			reservationInstant.getPartySize()
 		);
 
 		when(restaurantRepository.findById(request.getRestaurantId()))
-			.thenReturn(Optional.of(restaurant));
-		when(reservationSlotRepository.findBySlotTimeAndRestaurantId(
+			.thenReturn(Optional.of(restaurantInstant));
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
 			request.getReservationTime(), request.getRestaurantId()))
 			.thenReturn(Optional.empty());
 
@@ -154,7 +195,7 @@ class ReservationServiceTest {
 
 		verify(restaurantRepository, times(1)).findById(request.getRestaurantId());
 		verify(reservationSlotRepository, times(1))
-			.findBySlotTimeAndRestaurantId(request.getReservationTime(), request.getRestaurantId());
+			.findBySlotTimeAndRestaurantIdWithLock(request.getReservationTime(), request.getRestaurantId());
 		verifyNoInteractions(userRepository, reservationRepository);
 	}
 
@@ -165,17 +206,17 @@ class ReservationServiceTest {
 		// Given
 		ReservationCreateRequest request = ReservationCreateRequest.of(
 			user.getId(),
-			restaurant.getRestaurantId(),
-			reservationSlot.getSlotTime(),
-			reservation.getReservationDate(),
-			reservationSlot.getAvailablePartySize() + 1
+			restaurantInstant.getRestaurantId(),
+			reservationSlotInstant.getSlotTime(),
+			reservationInstant.getReservationDate(),
+			reservationSlotInstant.getAvailablePartySize() + 1
 		);
 
 		when(restaurantRepository.findById(request.getRestaurantId()))
-			.thenReturn(Optional.of(restaurant));
-		when(reservationSlotRepository.findBySlotTimeAndRestaurantId(
+			.thenReturn(Optional.of(restaurantInstant));
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
 			request.getReservationTime(), request.getRestaurantId()))
-			.thenReturn(Optional.of(reservationSlot));
+			.thenReturn(Optional.of(reservationSlotInstant));
 		when(userRepository.findById(request.getUserId()))
 			.thenReturn(Optional.of(user));
 
@@ -192,7 +233,7 @@ class ReservationServiceTest {
 		// Verify
 		verify(restaurantRepository, times(1)).findById(request.getRestaurantId());
 		verify(reservationSlotRepository, times(1))
-			.findBySlotTimeAndRestaurantId(request.getReservationTime(), request.getRestaurantId());
+			.findBySlotTimeAndRestaurantIdWithLock(request.getReservationTime(), request.getRestaurantId());
 		verifyNoInteractions(reservationRepository);
 	}
 
@@ -201,33 +242,34 @@ class ReservationServiceTest {
 	void testUpdateReservationStatusConfirmed() {
 		// Given
 
-		when(reservationRepository.findById(reservation.getReservationId()))
-			.thenReturn(Optional.of(reservation));
+		when(reservationRepository.findById(reservationInstant.getReservationId()))
+			.thenReturn(Optional.of(reservationInstant));
 
-		int initialAvailablePartySize = reservationSlot.getAvailablePartySize();
+		int initialAvailablePartySize = reservationSlotInstant.getAvailablePartySize();
 
 		// When
 		ReservationCreateResponse response = reservationService.updateReservation(
-			reservation.getReservationId(), "CONFIRMED");
+			reservationInstant.getReservationId(), "CONFIRMED");
 
 		// Then
 		Assertions.assertThat(response).isNotNull();
 		Assertions.assertThat(response.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
-		Assertions.assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
-		Assertions.assertThat(reservationSlot.getAvailablePartySize())
-			.isEqualTo(initialAvailablePartySize - reservation.getPartySize());
+		Assertions.assertThat(reservationInstant.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+		Assertions.assertThat(reservationSlotInstant.getAvailablePartySize())
+			.isEqualTo(initialAvailablePartySize - reservationInstant.getPartySize());
 
-		verify(reservationRepository, times(1)).findById(reservation.getReservationId());
+		verify(reservationRepository, times(1)).findById(reservationInstant.getReservationId());
 	}
 
 	@DisplayName("예약 대기 상태에서 취소 상태로 변경합니다.")
 	@Test
 	void testUpdateReservationStatusToCancelled() {
 		// Given
-		Long reservationId = reservation.getReservationId();
+		Long reservationId = reservationManual.getReservationId();
 
-		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
-
+		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservationManual));
+		
+		int initialAvailablePartySize = reservationSlotManual.getAvailablePartySize();
 		// When
 		ReservationCreateResponse response = reservationService.updateReservation(reservationId, "CANCELLED");
 
@@ -235,9 +277,9 @@ class ReservationServiceTest {
 		Assertions.assertThat(response).isNotNull();
 		Assertions.assertThat(response.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
 
-		Assertions.assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
-		Assertions.assertThat(reservationSlot.getAvailablePartySize()).isEqualTo(
-			reservationSlot.getMaxPartySize()
+		Assertions.assertThat(reservationManual.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+		Assertions.assertThat(reservationSlotManual.getAvailablePartySize()).isEqualTo(
+			initialAvailablePartySize
 		);
 
 		verify(reservationRepository, times(1)).findById(reservationId);
@@ -247,8 +289,8 @@ class ReservationServiceTest {
 	@Test
 	void testUpdateReservationStatusFromConfirmedToCancelled() {
 		// Given
-		ReservationSlot reservationSlot2 = ReservationSlotFixture.SLOT_FIXTURE_2.createSlot(restaurant);
-		Reservation reservation2 = ReservationFixture.RESERVATION_FIXTURE_2.createReservation(restaurant,
+		ReservationSlot reservationSlot2 = ReservationSlotFixture.SLOT_FIXTURE_2.createSlot(restaurantInstant);
+		Reservation reservation2 = ReservationFixture.RESERVATION_FIXTURE_2.createReservation(restaurantInstant,
 			reservationSlot2, user);
 		when(reservationRepository.findById(reservation2.getReservationId())).thenReturn(Optional.of(reservation2));
 		int initialAvailablePartySize = reservationSlot2.getAvailablePartySize();
@@ -270,8 +312,8 @@ class ReservationServiceTest {
 	@Test
 	void testUpdateReservationStatusFailsWhenAlreadyCancelled() {
 		// Given
-		ReservationSlot reservationSlot3 = ReservationSlotFixture.SLOT_FIXTURE_3.createSlot(restaurant);
-		Reservation reservation3 = ReservationFixture.RESERVATION_FIXTURE_3.createReservation(restaurant,
+		ReservationSlot reservationSlot3 = ReservationSlotFixture.SLOT_FIXTURE_3.createSlot(restaurantInstant);
+		Reservation reservation3 = ReservationFixture.RESERVATION_FIXTURE_3.createReservation(restaurantInstant,
 			reservationSlot3, user);
 		when(reservationRepository.findById(reservation3.getReservationId())).thenReturn(Optional.of(reservation3));
 
@@ -292,12 +334,12 @@ class ReservationServiceTest {
 		verifyNoMoreInteractions(reservationRepository);
 	}
 
-	@DisplayName("예약 완료 상태에서 취소로 변경 시 예외를 발생시킵니다.")
+	@DisplayName("예약 입장 상태에서 취소로 변경 시 예외를 발생시킵니다.")
 	@Test
-	void testUpdateReservationStatusFailsWhenCompletedToCancelled() {
+	void testUpdateReservationStatusFailsWhenEnteredToCancelled() {
 		// Given
-		ReservationSlot reservationSlot4 = ReservationSlotFixture.SLOT_FIXTURE_4.createSlot(restaurant);
-		Reservation reservation4 = ReservationFixture.RESERVATION_FIXTURE_4.createReservation(restaurant,
+		ReservationSlot reservationSlot4 = ReservationSlotFixture.SLOT_FIXTURE_4.createSlot(restaurantInstant);
+		Reservation reservation4 = ReservationFixture.RESERVATION_FIXTURE_4.createReservation(restaurantInstant,
 			reservationSlot4, user);
 		when(reservationRepository.findById(reservation4.getReservationId())).thenReturn(Optional.of(reservation4));
 
@@ -322,9 +364,9 @@ class ReservationServiceTest {
 	@Test
 	void testUpdateReservationInvalidStatus() {
 		// Given
-		Long reservationId = reservation.getReservationId();
+		Long reservationId = reservationInstant.getReservationId();
 		String invalidStatus = "INVALID_STATUS";
-		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservationInstant));
 
 		// When & Then
 		Assertions.assertThatThrownBy(() -> reservationService.updateReservation(reservationId, invalidStatus))
@@ -340,5 +382,4 @@ class ReservationServiceTest {
 		verify(reservationRepository, times(1)).findById(reservationId);
 		verifyNoMoreInteractions(reservationRepository);
 	}
-
 }
