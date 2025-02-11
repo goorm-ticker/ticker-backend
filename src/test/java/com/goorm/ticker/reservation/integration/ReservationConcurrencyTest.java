@@ -55,7 +55,7 @@ public class ReservationConcurrencyTest {
 	private UserRepository userRepository;
 
 	private Restaurant restaurantInstant;
-
+	private Long startUserId;
 	private List<ReservationSlot> testSlots = new ArrayList<>();
 
 	@BeforeEach
@@ -76,7 +76,10 @@ public class ReservationConcurrencyTest {
 				.password("password" + (i))
 				.build();
 
-			userRepository.save(user);
+			User savedUser = userRepository.save(user);
+			if (i == 0) {
+				startUserId = savedUser.getId();
+			}
 		}
 		userRepository.flush();
 
@@ -106,12 +109,13 @@ public class ReservationConcurrencyTest {
 
 		AtomicInteger successCount = new AtomicInteger(0); // 성공한 예약 수
 		AtomicInteger failureCount = new AtomicInteger(0); // 실패한 예약 수
-		log.info("🔄restaurantId : {}", restaurantId);
-		log.info("🔄reservationTime : {}", reservationTime);
-		log.info("🔄reservationDate : {}", reservationDate);
-		log.info("🔄 테스트 시작 - 100명의 유저가 동시에 예약 요청을 보냅니다.");
+		log.info("restaurantId : {}", restaurantId);
+		log.info("reservationTime : {}", reservationTime);
+		log.info("reservationDate : {}", reservationDate);
+		log.info("테스트 시작 - 100명의 유저가 동시에 예약 요청을 보냅니다.");
+		log.info("-----------------------------------------------------");
 		int partySize = 2;
-		for (long i = 1; i <= THREAD_COUNT; i++) {
+		for (long i = startUserId; i <= startUserId + THREAD_COUNT; i++) {
 			final long index = i;
 			executorService.execute(() -> {
 				try {
@@ -137,18 +141,16 @@ public class ReservationConcurrencyTest {
 		latch.await();
 		executorService.shutdown();
 		log.info("--------------------------------------------");
-		log.info("예약 성공: {}", successCount.get());
-		log.warn("예약 실패: {}", failureCount.get());
-
-		long endTime = System.currentTimeMillis(); // 실행 시간 측정 종료
+		long endTime = System.currentTimeMillis();
 
 		log.info("비관적 락 실행 시간: {} ms", (endTime - startTime));
+		log.info("예약 성공: {}", successCount.get());
+		log.warn("예약 실패: {}", failureCount.get());
 
 		// DB에서 실제 예약된 건수 확인
 		long totalReservations = reservationRepository.count();
 		log.info("실제 DB 예약 건수: {}", totalReservations);
 
-		// // 예약 가능한 슬롯보다 더 많은 예약이 들어가면 안 됨
 		assertThat(successCount.get()).isEqualTo(testSlots.get(0).getAvailablePartySize() / partySize);
 		assertThat(totalReservations).isEqualTo(testSlots.get(0).getAvailablePartySize() / partySize);
 	}
