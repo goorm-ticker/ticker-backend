@@ -36,12 +36,17 @@ public class Restaurant {
 	@Column(name = "max_waiting", nullable = false)
 	private Integer maxWaiting;
 
-	public static Restaurant of(String restaurantName, String x, String y, Integer maxWaiting) {
+	@Column(name = "reservation_policy", nullable = false)
+	private ReservationPolicy reservation_policy;
+
+	public static Restaurant of(String restaurantName, String x, String y, Integer maxWaiting,
+		ReservationPolicy reservationPolicy) {
 		return Restaurant.builder()
 			.restaurantName(restaurantName)
 			.x(x)
 			.y(y)
 			.maxWaiting(maxWaiting)
+			.reservation_policy(reservationPolicy)
 			.build();
 	}
 }
