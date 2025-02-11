@@ -17,6 +17,8 @@ public interface WaitListRepository extends JpaRepository<WaitList, Long> {
     boolean existsByRestaurant_RestaurantIdAndUser_IdAndStatus(Long restaurantId, Long userId, Status status);
     long countByRestaurant_RestaurantIdAndWaitingNumberLessThanAndStatus(Long restaurantId, int waitingNumber, Status status);
     Optional<WaitList> findByRestaurant_RestaurantIdAndUser_IdAndStatus(Long restaurantId, Long userId, Status status);
+    @Query("SELECT COUNT(w) FROM WaitList w WHERE w.restaurant.id = :restaurantId AND w.status = 'WAITING'")
+    long countTotalWaitingByRestaurantId(@Param("restaurantId") Long restaurantId);
 
     /*
     List<WaitList> findByRestaurant_RestaurantIdAndWaitingNumberGreaterThan(Long restaurantId, int waitingNumber);

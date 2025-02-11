@@ -20,13 +20,14 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class UserWaitingPositionServiceTest {
+public class WaitingPositionServiceTest {
 
     @InjectMocks
-    private UserWaitingPositionService userWaitingPositionService;
+    private WaitingPositionService waitingPositionService;
 
     @Mock
     private WaitListRepository waitListRepository;
@@ -36,7 +37,7 @@ public class UserWaitingPositionServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(session.getAttribute("user")).thenReturn(1L);
+        lenient().when(session.getAttribute("user")).thenReturn(1L);
     }
 
     @Test
@@ -58,7 +59,7 @@ public class UserWaitingPositionServiceTest {
                 .thenReturn(1L);
 
         // when
-        int position = userWaitingPositionService.getUserWaitingPosition(1L);
+        int position = waitingPositionService.getUserWaitingPosition(1L);
 
         // then
         assertThat(position).isEqualTo(1);
@@ -71,7 +72,7 @@ public class UserWaitingPositionServiceTest {
         when(session.getAttribute("user")).thenReturn(null);
 
         // when & then
-        assertThatThrownBy(() -> userWaitingPositionService.getUserWaitingPosition(1L))
+        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SESSION_EXPIRED);
     }
@@ -84,8 +85,21 @@ public class UserWaitingPositionServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> userWaitingPositionService.getUserWaitingPosition(1L))
+        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WAITLIST_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("총 대기 인원 조회 성공")
+    void getTotalWaitingPosition_Success() {
+        // given
+        when(waitListRepository.countTotalWaitingByRestaurantId(1L)).thenReturn(5L);
+
+        // when
+        long totalWaiting = waitingPositionService.getTotalWaitingCount(1L);
+
+        // then
+        assertThat(totalWaiting).isEqualTo(5L);
     }
 }
