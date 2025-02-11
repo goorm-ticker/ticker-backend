@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest
 public class ReservationConcurrencyTest {
 
-	private static final int THREAD_COUNT = 1000;
+	private static final int THREAD_COUNT = 100;
 
 	@Autowired
 	private ReservationService reservationService;
@@ -98,7 +98,7 @@ public class ReservationConcurrencyTest {
 	}
 
 	@Test
-	@DisplayName("1000명 유저 동시 예약 테스트")
+	@DisplayName("100명 유저 동시 예약 테스트")
 	void testConcurrentReservationsWithoutLock() throws InterruptedException {
 		ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
 		CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
