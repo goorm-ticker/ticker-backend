@@ -2,6 +2,7 @@ package com.goorm.ticker.waitlist.service;
 
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
+import com.goorm.ticker.map.service.MapService;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.restaurant.repository.RestaurantRepository;
 import com.goorm.ticker.user.entity.User;
@@ -44,6 +45,8 @@ class RegisterWaitingServiceTest {
 
     @Mock
     private HttpSession session;
+    @Mock
+    private MapService mapService;
 
     private User testUser;
     private Restaurant testRestaurant;

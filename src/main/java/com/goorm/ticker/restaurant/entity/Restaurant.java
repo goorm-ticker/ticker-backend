@@ -20,7 +20,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "restaurants")
 public class Restaurant {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "restaurant_id")
 	private Long restaurantId;
 
@@ -36,12 +35,14 @@ public class Restaurant {
 	@Column(name = "max_waiting", nullable = false)
 	private Integer maxWaiting;
 
-	public static Restaurant of(String restaurantName, String x, String y, Integer maxWaiting) {
+
+	public static Restaurant of(Long restaurantId,String restaurantName, String x, String y, Integer maxWaiting) {
 		return Restaurant.builder()
-			.restaurantName(restaurantName)
-			.x(x)
-			.y(y)
-			.maxWaiting(maxWaiting)
-			.build();
+				.restaurantId(restaurantId)
+				.restaurantName(restaurantName)
+				.x(x)
+				.y(y)
+				.maxWaiting(maxWaiting)
+				.build();
 	}
 }
