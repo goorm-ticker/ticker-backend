@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.goorm.ticker.user.entity.User;
+import com.goorm.ticker.notification.repository.NotificationRepository;
 import com.goorm.ticker.user.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -27,8 +28,12 @@ public class UserDummyDataTest {
 	@Autowired
 	private UserRepository userRepository;
 
+	@Autowired
+	private NotificationRepository notificationRepository;
+
 	@AfterEach
 	void cleanUp() {
+		notificationRepository.deleteAll();
 		userRepository.deleteAll();
 	}
 
@@ -39,10 +44,10 @@ public class UserDummyDataTest {
 
 		for (int i = 0; i < THREAD_COUNT; i++) {
 			User user = User.builder()
-				.loginId("loginId" + i)
-				.name("name" + i)
-				.password("password" + i)
-				.build();
+					.loginId("loginId" + i)
+					.name("name" + i)
+					.password("password" + i)
+					.build();
 			userRepository.save(user);
 		}
 
@@ -61,10 +66,10 @@ public class UserDummyDataTest {
 		List<User> users = new ArrayList<>();
 		for (int i = 0; i < THREAD_COUNT; i++) {
 			users.add(User.builder()
-				.loginId("loginId" + i)
-				.name("name" + i)
-				.password("password" + i)
-				.build());
+					.loginId("loginId" + i)
+					.name("name" + i)
+					.password("password" + i)
+					.build());
 		}
 
 		userRepository.saveAll(users);
