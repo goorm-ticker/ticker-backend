@@ -3,6 +3,7 @@ package com.goorm.ticker.waitlist.service;
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.restaurant.entity.Restaurant;
+import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
@@ -59,10 +60,11 @@ public class WaitingPositionServiceTest {
                 .thenReturn(1L);
 
         // when
-        int position = waitingPositionService.getUserWaitingPosition(1L);
+        WaitingInfoResponseDto waitingIfo = waitingPositionService.getUserWaitingPosition(1L);
 
         // then
-        assertThat(position).isEqualTo(1);
+        assertThat(waitingIfo.waitingCount()).isEqualTo(1);
+        assertThat(waitingIfo.estimatedWaitTime()).isEqualTo(20);
     }
 
     @Test

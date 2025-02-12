@@ -2,6 +2,7 @@ package com.goorm.ticker.waitlist.service;
 
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
+import com.goorm.ticker.map.service.MapService;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
@@ -16,6 +17,7 @@ public class CancelWaitingService {
 
     private final WaitListRepository waitListRepository;
     private final HttpSession httpSession;
+    private final MapService mapService;
 
     @Transactional
     public void cancelWaiting() {
@@ -26,6 +28,9 @@ public class CancelWaitingService {
         WaitList waitList = findUserWaitingList(userId);
 
         waitList.updateStatus(Status.CANCELLED);
+
+        //지도 대기열 업데이트
+        mapService.updateMap(waitList.getRestaurant().getRestaurantId());
     }
 
     private Long getSessionUserId() {

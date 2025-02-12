@@ -4,8 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -22,7 +20,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "restaurants")
 public class Restaurant {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "restaurant_id")
 	private Long restaurantId;
 
@@ -42,9 +39,10 @@ public class Restaurant {
 	@Column(name = "reservation_policy", nullable = false)
 	private ReservationPolicy reservationPolicy;
 
-	public static Restaurant of(String restaurantName, String x, String y, Integer maxWaiting,
+	public static Restaurant of(Long restaurantId, String restaurantName, String x, String y, Integer maxWaiting,
 		ReservationPolicy reservationPolicy) {
 		return Restaurant.builder()
+			.restaurantId(restaurantId)
 			.restaurantName(restaurantName)
 			.x(x)
 			.y(y)
