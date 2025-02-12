@@ -11,12 +11,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.goorm.ticker.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.goorm.ticker.common.exception.CustomException;
@@ -37,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 @Slf4j
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class ReservationConcurrencyTest {
 
 	private static final int THREAD_COUNT = 100;
@@ -52,6 +55,9 @@ public class ReservationConcurrencyTest {
 
 	@Autowired
 	private ReservationRepository reservationRepository;
+
+	@Autowired
+	private NotificationRepository notificationRepository;
 
 	@Autowired
 	private UserRepository userRepository;
@@ -93,6 +99,7 @@ public class ReservationConcurrencyTest {
 	@AfterEach
 	void afterEach() {
 		reservationRepository.deleteAll();
+		notificationRepository.deleteAll();
 		reservationSlotRepository.deleteAll();
 		restaurantRepository.deleteAll();
 		userRepository.deleteAll();

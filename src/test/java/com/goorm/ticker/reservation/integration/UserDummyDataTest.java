@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.goorm.ticker.user.entity.User;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 @Slf4j
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class UserDummyDataTest {
 
 	private static final int THREAD_COUNT = 100;
