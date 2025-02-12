@@ -2,6 +2,8 @@ package com.goorm.ticker.waitlist.service;
 
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
+import com.goorm.ticker.map.service.MapService;
+import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
@@ -27,6 +29,8 @@ public class CompleteWaitingServiceTest {
 
     @Mock
     private WaitListRepository waitListRepository;
+    @Mock
+    private MapService mapService;
 
     @Mock
     private HttpSession session;
@@ -43,6 +47,7 @@ public class CompleteWaitingServiceTest {
         WaitList waitList = WaitList.builder()
                 .waitingNumber(1)
                 .status(Status.WAITING)
+                .restaurant(Restaurant.builder().restaurantId(1L).build())
                 .build();
 
         when(waitListRepository.findByUser_IdAndStatus(1L, Status.WAITING))
