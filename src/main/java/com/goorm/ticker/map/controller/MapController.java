@@ -3,7 +3,6 @@ package com.goorm.ticker.map.controller;
 import com.goorm.ticker.map.service.MapService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -23,13 +22,5 @@ public class MapController {
     public SseEmitter sub(@PathVariable Long userId, @RequestParam List<Long> restaurantId, @RequestParam List<String> x, @RequestParam List<String> y, @RequestParam List<String> name){
         return mapService.addEmitter(userId,x,y,restaurantId,name);
     }
-
-    //대기열 변화 테스트용 api입니다
-    /*@GetMapping(value = "/test/{restaurantId}")
-    public Long test(@RequestParam Long restaurantId, @RequestParam int waiting){
-        mapService.updateMap(restaurantId,waiting);
-        return restaurantId;
-    }*/
-
 
 }

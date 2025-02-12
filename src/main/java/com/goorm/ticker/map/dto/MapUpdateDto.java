@@ -7,13 +7,20 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class MapUpdateDto {
     private Long restaurantId;
-    private String name;
+    private String restaurantName;
     private String x;
     private String y;
-    private int waiting;
+    private Long waiting;
+
+    public MapUpdateDto(Long restaurantId, String restaurantName, String x, String y, Long waiting) {
+        this.restaurantId = restaurantId;
+        this.restaurantName = restaurantName;
+        this.x = x;
+        this.y = y;
+        this.waiting = waiting;
+    }
 
 }
