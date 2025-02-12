@@ -33,5 +33,6 @@ out/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
+### Firebase 서비스 계정 키 파일 ###
+src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json
+
