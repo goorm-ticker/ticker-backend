@@ -71,20 +71,19 @@ public class ReservationConcurrencyTest {
 			reservationSlotRepository.save(slot);
 			testSlots.add(slot);
 		}
+		List<User> users = new ArrayList<>();
 		for (int i = 0; i < THREAD_COUNT; i++) {
-			User user = User.builder()
+			users.add(User.builder()
 				.loginId("loginId" + (i))
 				.name("name" + (i))
 				.password("password" + (i))
-				.build();
-
-			User savedUser = userRepository.save(user);
-			if (i == 0) {
-				startUserId = savedUser.getId();
-			}
+				.build());
 		}
+		List<User> savedUsers = userRepository.saveAll(users);
 		userRepository.flush();
 
+		// 시작 ID 설정
+		startUserId = savedUsers.get(0).getId();
 		// 데이터 검증
 		assertThat(restaurantRepository.count()).isGreaterThan(0);
 		assertThat(reservationSlotRepository.count()).isGreaterThanOrEqualTo(4);
