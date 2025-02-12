@@ -99,7 +99,7 @@ public class ReservationConcurrencyTest {
 	}
 
 	@Test
-	@DisplayName("100명 유저 동시 예약 테스트")
+	@DisplayName("100명 유저 동시 예약 테스트 - 비관적 락 적용")
 	void testConcurrentReservationsWithoutLock() throws InterruptedException {
 		ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
 		CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
@@ -128,11 +128,12 @@ public class ReservationConcurrencyTest {
 						partySize);
 					reservationService.reserve(request);
 					successCount.incrementAndGet();
-					log.info("[O] 예약 성공 - 유저 ID: {} | 예약 일시 : {} {}", (index), reservationDate,
+					log.info("[O] 성공 - 유저 ID: {} | 예약 일시 : {} {}", (index), reservationDate,
 						reservationTime);
 				} catch (CustomException e) {
 					failureCount.incrementAndGet();
-					log.warn("[X] 예약 실패 - 유저 ID: {} | 에러 코드: {}", (index), e.getErrorCode());
+					log.warn("[X] 실패 - 유저 ID: {} | 에러 코드: {} | {} ", (index), e.getErrorCode(),
+						e.getErrorCode().getMessage());
 				} finally {
 					latch.countDown();
 				}
@@ -144,7 +145,7 @@ public class ReservationConcurrencyTest {
 		log.info("--------------------------------------------");
 		long endTime = System.currentTimeMillis();
 
-		log.info("비관적 락 실행 시간: {} ms", (endTime - startTime));
+		log.info("실행 시간: {} ms", (endTime - startTime));
 		log.info("예약 성공: {}", successCount.get());
 		log.warn("예약 실패: {}", failureCount.get());
 
