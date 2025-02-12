@@ -10,6 +10,7 @@ import com.goorm.ticker.reservation.Entity.ReservationStatus;
 import com.goorm.ticker.reservation.dto.request.ReservationCreateRequest;
 import com.goorm.ticker.reservation.dto.response.ReservationCreateResponse;
 import com.goorm.ticker.reservation.repository.ReservationRepository;
+import com.goorm.ticker.restaurant.entity.ReservationPolicy;
 import com.goorm.ticker.restaurant.entity.ReservationSlot;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.restaurant.repository.ReservationSlotRepository;
@@ -35,7 +36,7 @@ public class ReservationService {
 			.orElseThrow(() -> new CustomException(ErrorCode.RESTAURANT_NOT_FOUND));
 
 		// 예약 슬롯이 존재하는지 조회
-		ReservationSlot slot = reservationSlotRepository.findBySlotTimeAndRestaurantId(
+		ReservationSlot slot = reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
 				request.getReservationTime(), request.getRestaurantId())
 			.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_SLOT_NOT_FOUND));
 
@@ -47,14 +48,23 @@ public class ReservationService {
 		User user = userRepository.findById(request.getUserId())
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
+		ReservationStatus initialStatus = switch (restaurant.getReservationPolicy()) {
+			case INSTANT_CONFIRMATION -> ReservationStatus.CONFIRMED;
+			case MANUAL_CONFIRMATION -> ReservationStatus.PENDING;
+		};
+
 		Reservation reservation = Reservation.of(
 			restaurant,
 			slot,
 			request.getReservationDate(),
 			user,
 			request.getPartySize(),
-			ReservationStatus.WAITING
+			initialStatus
 		);
+
+		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
+			slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
+		}
 
 		reservationRepository.save(reservation);
 
@@ -83,7 +93,7 @@ public class ReservationService {
 			throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
-		if (reservation.getStatus() == newStatus || reservation.getStatus() == ReservationStatus.COMPLETED
+		if (reservation.getStatus() == newStatus || reservation.getStatus() == ReservationStatus.ENTERED
 			|| reservation.getStatus() == ReservationStatus.CANCELLED) {
 			throw new CustomException(ErrorCode.RESERVATION_ALREADY_UPDATED);
 		}
@@ -91,7 +101,7 @@ public class ReservationService {
 		// 예약 상태 업데이트
 		switch (newStatus) {
 			case CANCELLED -> handleCancellation(reservation);
-			case COMPLETED -> handleCompletion(reservation);
+			case ENTERED -> handleEntry(reservation);
 			case CONFIRMED -> handleConfirmation(reservation);
 			default -> throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
 		}
@@ -107,29 +117,24 @@ public class ReservationService {
 			.build();
 	}
 
-	// 예약 취소 처리
 	private void handleCancellation(Reservation reservation) {
-		if (reservation.getStatus() == ReservationStatus.WAITING) {
-			reservation.updateStatus(ReservationStatus.CANCELLED);
-		} else if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-			reservation.updateStatus(ReservationStatus.CANCELLED);
+		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
 			ReservationSlot slot = reservation.getReservationSlot();
 			slot.updateAvailablePartySize(slot.getAvailablePartySize() + reservation.getPartySize());
 		}
+		reservation.cancelReservation();
 	}
 
-	// 예약 완료 처리
-	private void handleCompletion(Reservation reservation) {
-		reservation.updateStatus(ReservationStatus.COMPLETED);
+	private void handleEntry(Reservation reservation) {
+		reservation.enterReservation();
 	}
 
-	// 예약 확정 처리
 	private void handleConfirmation(Reservation reservation) {
 		ReservationSlot slot = reservation.getReservationSlot();
 		if (slot.getAvailablePartySize() < reservation.getPartySize()) {
 			throw new CustomException(ErrorCode.PARTY_SIZE_EXCEEDED);
 		}
-		reservation.updateStatus(ReservationStatus.CONFIRMED);
+		reservation.confirmReservation();
 		slot.updateAvailablePartySize(slot.getAvailablePartySize() - reservation.getPartySize());
 	}
 }
