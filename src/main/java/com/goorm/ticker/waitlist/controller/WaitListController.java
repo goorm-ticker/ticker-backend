@@ -2,6 +2,7 @@ package com.goorm.ticker.waitlist.controller;
 
 import com.goorm.ticker.waitlist.dto.WaitListRequestDto;
 import com.goorm.ticker.waitlist.dto.WaitListResponseDto;
+import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
 import com.goorm.ticker.waitlist.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,13 +29,13 @@ public class WaitListController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "대기 순번 조회", description = "사용자의 현재 대기 순번을 반환합니다.")
+    @Operation(summary = "대기 순번 조회", description = "사용자의 현재 대기 순번과 예상 대기 시간을 반환합니다.")
     @GetMapping("/{restaurantId}/position")
-    public ResponseEntity<Integer> getUserWaitingPosition(
+    public ResponseEntity<WaitingInfoResponseDto> getUserWaitingPosition(
             @Parameter(description = "조회할 식당 ID", required = true)
             @PathVariable("restaurantId") Long restaurantId) {
-        int position = waitingPositionService.getUserWaitingPosition(restaurantId);
-        return ResponseEntity.ok(position);
+        WaitingInfoResponseDto waitingInfo = waitingPositionService.getUserWaitingPosition(restaurantId);
+        return ResponseEntity.ok(waitingInfo);
     }
 
     @Operation(summary = "총 대기 인원 조회", description = "식당에 현재 대기 인원을 반환합니다.")
