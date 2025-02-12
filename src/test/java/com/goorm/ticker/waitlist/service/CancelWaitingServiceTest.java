@@ -2,6 +2,8 @@ package com.goorm.ticker.waitlist.service;
 
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
+import com.goorm.ticker.map.service.MapService;
+import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
@@ -17,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +30,8 @@ public class CancelWaitingServiceTest {
 
     @Mock
     private WaitListRepository waitListRepository;
+    @Mock
+    private MapService mapService;
 
     @Mock
     private HttpSession session;
@@ -34,6 +39,7 @@ public class CancelWaitingServiceTest {
     @BeforeEach
     void setUp() {
         when(session.getAttribute("user")).thenReturn(1L);
+
     }
 
     @Test
@@ -43,10 +49,12 @@ public class CancelWaitingServiceTest {
         WaitList waitList = WaitList.builder()
                 .waitingNumber(1)
                 .status(Status.WAITING)
+                .restaurant(Restaurant.builder().restaurantId(1L).build())
                 .build();
 
         when(waitListRepository.findByUser_IdAndStatus(1L, Status.WAITING))
                 .thenReturn(Optional.of(waitList));
+
 
         // when
         cancelWaitingService.cancelWaiting();

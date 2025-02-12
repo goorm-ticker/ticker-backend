@@ -14,13 +14,12 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
     open-in-view: false
-  firebase:
-    config-path: ${FIREBASE_CONFIG_PATH:classpath:ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json}
-  redis:
-    host: localhost
-    port: 6379
 
 server:
   servlet:
     session:
       timeout: 30m
+    encoding:
+      force: true
+      charset: UTF-8
+      enabled: true

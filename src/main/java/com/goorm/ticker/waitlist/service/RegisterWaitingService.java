@@ -2,6 +2,7 @@ package com.goorm.ticker.waitlist.service;
 
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
+import com.goorm.ticker.map.service.MapService;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.restaurant.repository.RestaurantRepository;
 import com.goorm.ticker.user.entity.User;
@@ -23,6 +24,7 @@ public class RegisterWaitingService {
     private final RestaurantRepository restaurantRepository;
     private final WaitListRepository waitListRepository;
     private final HttpSession httpSession;
+    private final MapService mapService;
 
     public WaitListResponseDto registerWaiting(WaitListRequestDto request) {
         // 세션에서 사용자 ID 가져오기
@@ -41,6 +43,9 @@ public class RegisterWaitingService {
         // 대기열 등록 및 저장
         WaitList waitList = WaitList.createWaitList(user, restaurant, newWaitingNumber);
         waitListRepository.save(waitList);
+
+        //지도에서 해당 식당 대기열 업데이트
+        mapService.updateMap(request.restaurantId());
 
         return new WaitListResponseDto(waitList);
     }
