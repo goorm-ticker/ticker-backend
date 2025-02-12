@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.fixture.ReservationSlotFixture;
@@ -33,6 +34,7 @@ import com.goorm.ticker.user.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
+@ActiveProfiles("test")
 @Slf4j
 @SpringBootTest
 public class ReservationConcurrencyTest {
@@ -115,7 +117,7 @@ public class ReservationConcurrencyTest {
 		log.info("테스트 시작 - 100명의 유저가 동시에 예약 요청을 보냅니다.");
 		log.info("-----------------------------------------------------");
 		int partySize = 2;
-		for (long i = startUserId; i <= startUserId + THREAD_COUNT; i++) {
+		for (long i = startUserId; i < startUserId + THREAD_COUNT; i++) {
 			final long index = i;
 			executorService.execute(() -> {
 				try {
