@@ -29,7 +29,7 @@ public class ReservationService {
 	private final UserRepository userRepository;
 
 	@Transactional
-	public ReservationCreateResponse reserve(ReservationCreateRequest request) {
+	public ReservationCreateResponse reserve(ReservationCreateRequest request, Long userId) {
 
 		// 음식점 조회
 		Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
@@ -45,7 +45,7 @@ public class ReservationService {
 			throw new CustomException(ErrorCode.PARTY_SIZE_EXCEEDED);
 		}
 
-		User user = userRepository.findById(request.getUserId())
+		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
 		ReservationStatus initialStatus = switch (restaurant.getReservationPolicy()) {
@@ -80,10 +80,14 @@ public class ReservationService {
 	}
 
 	@Transactional
-	public ReservationCreateResponse updateReservation(Long reservationId, String status) {
+	public ReservationCreateResponse updateReservation(Long reservationId, String status, Long userId) {
 		// 예약 조회
 		Reservation reservation = reservationRepository.findById(reservationId)
 			.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+		if (!reservation.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.FORBIDDEN_RESERVATION_ACCESS);
+		}
 
 		// 예약 상태 확인
 		ReservationStatus newStatus;

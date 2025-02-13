@@ -22,7 +22,7 @@ public enum ErrorCode {
 	RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
 	RESERVATION_ALREADY_UPDATED(HttpStatus.BAD_REQUEST, "이미 처리한 예약입니다."),
 	INVALID_RESERVATION_STATUS(HttpStatus.NOT_FOUND, "존재하지 않는 예약 상태입니다."),
-	UNAUTHORIZED_RESERVATION_ACCESS(HttpStatus.UNAUTHORIZED, "해당 예약에 접근할 수 없습니다."),
+	FORBIDDEN_RESERVATION_ACCESS(HttpStatus.FORBIDDEN, "해당 예약에 접근할 수 없습니다."),
 
 	// WaitList
 	WAITLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 대기열을 찾을 수 없습니다."),
