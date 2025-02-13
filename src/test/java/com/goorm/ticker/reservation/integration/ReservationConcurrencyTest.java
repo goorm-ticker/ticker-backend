@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.goorm.ticker.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.fixture.ReservationSlotFixture;
 import com.goorm.ticker.fixture.RestaurantFixture;
+import com.goorm.ticker.notification.repository.NotificationRepository;
 import com.goorm.ticker.reservation.dto.request.ReservationCreateRequest;
 import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.reservation.service.ReservationService;
@@ -133,7 +133,7 @@ public class ReservationConcurrencyTest {
 						reservationTime,
 						reservationDate,
 						partySize);
-					reservationService.reserve(request);
+					reservationService.reserve(request, index);
 					successCount.incrementAndGet();
 					log.info("[O] 성공 - 유저 ID: {} | 예약 일시 : {} {}", (index), reservationDate,
 						reservationTime);
