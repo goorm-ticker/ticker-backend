@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,4 +18,14 @@ public interface ReservationSlotRepository extends JpaRepository<ReservationSlot
 	@Query("SELECT r FROM ReservationSlot r WHERE r.slotTime = :slotTime AND r.restaurant.restaurantId = :restaurantId")
 	Optional<ReservationSlot> findBySlotTimeAndRestaurantIdWithLock(@Param("slotTime") LocalTime slotTime,
 		@Param("restaurantId") Long restaurantId);
+
+	@Modifying
+	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize - :partySize " +
+		"WHERE rs.id = :slotId AND rs.availablePartySize >= :partySize")
+	int decreaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
+
+	@Modifying
+	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize + :partySize " +
+		"WHERE rs.id = :slotId")
+	int increaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
 }

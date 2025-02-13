@@ -63,7 +63,7 @@ public class ReservationService {
 		);
 
 		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
-			slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
+			reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
 		}
 
 		reservationRepository.save(reservation);
@@ -123,8 +123,9 @@ public class ReservationService {
 
 	private void handleCancellation(Reservation reservation) {
 		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-			ReservationSlot slot = reservation.getReservationSlot();
-			slot.updateAvailablePartySize(slot.getAvailablePartySize() + reservation.getPartySize());
+			// 원자적으로 가용 인원 증가 (비관적 락 적용된 트랜잭션 내에서 실행됨)
+			reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
+				reservation.getPartySize());
 		}
 		reservation.cancelReservation();
 	}
