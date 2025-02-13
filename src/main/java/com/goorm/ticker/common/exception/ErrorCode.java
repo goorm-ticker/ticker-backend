@@ -21,7 +21,8 @@ public enum ErrorCode {
 	PARTY_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "해당 시간대에 예약 가능한 인원이 초과되었습니다."),
 	RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
 	RESERVATION_ALREADY_UPDATED(HttpStatus.BAD_REQUEST, "이미 처리한 예약입니다."),
-	INVALID_RESERVATION_STATUS(HttpStatus.BAD_REQUEST, "존재하지 않는 예약 상태입니다."),
+	INVALID_RESERVATION_STATUS(HttpStatus.NOT_FOUND, "존재하지 않는 예약 상태입니다."),
+	UNAUTHORIZED_RESERVATION_ACCESS(HttpStatus.UNAUTHORIZED, "해당 예약에 접근할 수 없습니다."),
 
 	// WaitList
 	WAITLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 대기열을 찾을 수 없습니다."),
