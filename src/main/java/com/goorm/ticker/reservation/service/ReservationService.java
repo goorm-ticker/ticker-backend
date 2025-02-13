@@ -19,9 +19,11 @@ import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReservationService {
 	private final ReservationRepository reservationRepository;
 	private final RestaurantRepository restaurantRepository;
@@ -63,10 +65,15 @@ public class ReservationService {
 		);
 
 		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
+			// 원자적으로 가용 인원 감소
 			reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
 		}
 
 		reservationRepository.save(reservation);
+
+		log.info("[O] 예약 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
+			reservation.getUser().getId(), reservation.getReservationId(),
+			reservation.getReservationSlot().getAvailablePartySize());
 
 		return ReservationCreateResponse.builder()
 			.reservationId(reservation.getReservationId())
@@ -123,11 +130,15 @@ public class ReservationService {
 
 	private void handleCancellation(Reservation reservation) {
 		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-			// 원자적으로 가용 인원 증가 (비관적 락 적용된 트랜잭션 내에서 실행됨)
+			// 원자적으로 가용 인원 증가
 			reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
 				reservation.getPartySize());
 		}
 		reservation.cancelReservation();
+		log.info("[O] 취소 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
+			reservation.getUser().getId(), reservation.getReservationId(),
+			reservation.getReservationSlot().getAvailablePartySize());
+
 	}
 
 	private void handleEntry(Reservation reservation) {
