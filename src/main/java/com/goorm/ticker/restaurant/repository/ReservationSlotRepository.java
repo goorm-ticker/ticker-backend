@@ -20,12 +20,12 @@ public interface ReservationSlotRepository extends JpaRepository<ReservationSlot
 		@Param("restaurantId") Long restaurantId);
 
 	@Modifying
-	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize - :partySize " +
-		"WHERE rs.id = :slotId AND rs.availablePartySize >= :partySize")
-	int decreaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
+	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize - :partySize "
+		+ "WHERE rs.id = :slotId AND rs.availablePartySize >= :partySize")
+	void decreaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
 
 	@Modifying
-	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize + :partySize " +
-		"WHERE rs.id = :slotId")
-	int increaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
+	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize + :partySize "
+		+ "WHERE rs.id = :slotId")
+	void increaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
 }
