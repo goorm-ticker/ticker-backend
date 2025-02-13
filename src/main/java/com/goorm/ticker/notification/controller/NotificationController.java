@@ -2,6 +2,7 @@ package com.goorm.ticker.notification.controller;
 
 import com.goorm.ticker.notification.dto.NotificationRequest;
 import com.goorm.ticker.notification.dto.NotificationResponse;
+import com.goorm.ticker.notification.service.FCMService;
 import com.goorm.ticker.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.util.List;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final FCMService fcmService;
 
     @PostMapping
     public ResponseEntity<Void> createNotification(@RequestBody NotificationRequest request) {
@@ -42,4 +44,12 @@ public class NotificationController {
         long unreadCount = notificationService.countUnreadNotifications(userId);
         return ResponseEntity.ok(unreadCount);
     }
+
+    @PostMapping("/send-fcm")
+    public ResponseEntity<String> sendFCMNotification(@RequestParam String topic, @RequestParam String title, @RequestParam String body) {
+        fcmService.sentNotification(topic, title, body);
+        return ResponseEntity.ok("Notification sent successfully");
+    }
+
+
 }
