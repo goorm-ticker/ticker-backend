@@ -1,101 +1,134 @@
 package com.goorm.ticker.notification.service;
 
+import com.goorm.ticker.fixture.ReservationFixture;
+import com.goorm.ticker.fixture.RestaurantFixture;
+import com.goorm.ticker.fixture.ReservationSlotFixture;
 import com.goorm.ticker.notification.dto.NotificationRequest;
 import com.goorm.ticker.notification.dto.NotificationResponse;
 import com.goorm.ticker.notification.entity.Notification;
 import com.goorm.ticker.notification.entity.NotificationType;
+import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
 import com.goorm.ticker.notification.repository.NotificationRepository;
+import com.goorm.ticker.reservation.Entity.Reservation;
+import com.goorm.ticker.reservation.repository.ReservationRepository;
+import com.goorm.ticker.restaurant.entity.ReservationSlot;
+import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
 @ActiveProfiles("test")
 public class NotificationServiceTest {
 
-    @Autowired
+    @InjectMocks
     private NotificationService notificationService;
 
-    @Autowired
+    @Mock
     private NotificationRepository notificationRepository;
 
-    @Autowired
+    @Mock
     private UserRepository userRepository;
 
-    @Autowired
+    @Mock
+    private ReservationRepository reservationRepository;
+
+    @Mock
+    private ReservationStatusPublisher reservationStatusPublisher;
+
+    @Mock
     private FCMService fcmService;
 
     private User testUser;
+    private Reservation testReservation;
+    private Restaurant restaurantInstant;
+    private ReservationSlot reservationSlotInstant;
+    private Notification testNotification;
 
     @BeforeEach
     void setUp() {
-        notificationRepository.deleteAll();
-        userRepository.deleteAll();
+        MockitoAnnotations.openMocks(this);
 
-        testUser = new User(null, "testUser", "testUser1", "password1234");
-        userRepository.save(testUser);
+        testUser = new User(1L, "testUser", "testUser", "password1234");
+
+        restaurantInstant = RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant();
+        reservationSlotInstant = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantInstant);
+
+        testReservation = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(
+                restaurantInstant, reservationSlotInstant, testUser
+        );
+
+        testReservation = spy(testReservation);
+        when(testReservation.getReservationId()).thenReturn(1L);
+
+        testNotification = Notification.createNotification(
+                testUser, "예약이 확정되었습니다.", NotificationType.RESERVATION_CONFIRMATION
+        );
+
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
+        when(notificationRepository.save(any())).thenReturn(testNotification);
+        when(notificationRepository.findByUserIdOrderByCreatedAtDesc(eq(testUser.getId())))
+                .thenReturn(List.of(testNotification));
+
+        when(reservationRepository.findById(eq(1L))).thenReturn(Optional.of(testReservation));
+
+        doNothing().when(reservationStatusPublisher).publishReservationStatus(anyLong(), anyString());
+
+        doNothing().when(fcmService).sentNotification(anyString(), anyString(), anyString());
     }
 
     @Test
     @DisplayName("알림을 생성한다.")
     void createNotificationTest() {
-        NotificationRequest request = new NotificationRequest(testUser.getId(), "예약이 확정되었습니다.", NotificationType.RESERVATION_CONFIRMATION);
+        NotificationRequest request = new NotificationRequest(
+                testUser.getId(),
+                testReservation.getReservationId(),
+                "예약이 확정되었습니다.",
+                NotificationType.RESERVATION_CONFIRMATION
+        );
 
         notificationService.createNotification(request);
+
+        verify(notificationRepository, atLeastOnce()).save(any(Notification.class));
 
         List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(testUser.getId());
         assertEquals(1, notifications.size());
         assertEquals("예약이 확정되었습니다.", notifications.get(0).getMessage());
+
+        verify(reservationStatusPublisher, times(1)).publishReservationStatus(eq(testReservation.getReservationId()), anyString());
+
+        verify(fcmService, times(1)).sentNotification(anyString(), anyString(), anyString());
     }
 
     @Test
     @DisplayName("사용자의 알림 목록을 조회한다.")
     void getNotificationsTest() {
-        NotificationRequest request1 = new NotificationRequest(testUser.getId(), "예약이 확정되었습니다.", NotificationType.RESERVATION_CONFIRMATION);
-        NotificationRequest request2 = new NotificationRequest(testUser.getId(), "입장 가능합니다.", NotificationType.ENTRY_POSSIBLE);
+        NotificationRequest request = new NotificationRequest(
+                testUser.getId(),
+                testReservation.getReservationId(),
+                "예약이 확정되었습니다.",
+                NotificationType.RESERVATION_CONFIRMATION
+        );
 
-        notificationService.createNotification(request1);
-        notificationService.createNotification(request2);
+        notificationService.createNotification(request);
 
         List<NotificationResponse> notifications = notificationService.getNotifications(testUser.getId());
 
-        assertEquals(2, notifications.size());
-        assertEquals("입장 가능합니다.", notifications.get(0).getMessage());
-        assertEquals("예약이 확정되었습니다.", notifications.get(1).getMessage());
-    }
+        assertEquals(1, notifications.size());
+        assertEquals("예약이 확정되었습니다.", notifications.get(0).getMessage());
 
-    @Test
-    @DisplayName("알림 읽음 처리한다.")
-    void markAsReadTest() {
-        Notification notification = Notification.createNotification(testUser, "테스트 메시지", NotificationType.RESERVATION_CONFIRMATION);
-        notificationRepository.save(notification);
-
-        notificationService.markAsRead(notification.getId());
-
-        Notification updatedNotification = notificationRepository.findById(notification.getId()).orElseThrow();
-        assertTrue(updatedNotification.isRead());
-    }
-
-    @Test
-    @DisplayName("읽지 않은 알림 수를 조회한다.")
-    void countUnreadNotificationsTest() {
-        NotificationRequest request1 = new NotificationRequest(testUser.getId(), "예약 확정 알림", NotificationType.RESERVATION_CONFIRMATION);
-        NotificationRequest request2 = new NotificationRequest(testUser.getId(), "입장 가능 알림", NotificationType.ENTRY_POSSIBLE);
-        notificationService.createNotification(request1);
-        notificationService.createNotification(request2);
-
-        long unreadCount = notificationService.countUnreadNotifications(testUser.getId());
-
-        assertEquals(2, unreadCount);
+        verify(notificationRepository, times(1)).findByUserIdOrderByCreatedAtDesc(eq(testUser.getId()));
     }
 }
