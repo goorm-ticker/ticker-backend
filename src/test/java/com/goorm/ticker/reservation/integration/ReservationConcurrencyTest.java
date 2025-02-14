@@ -2,6 +2,8 @@ package com.goorm.ticker.reservation.integration;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -11,6 +13,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
 import com.goorm.ticker.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +72,17 @@ public class ReservationConcurrencyTest {
 	private List<ReservationSlot> testSlots = new ArrayList<>();
 
 	@BeforeEach
-	void setUp() {
+	void setUp() throws IOException {
+		// Firebase 초기화
+		if (FirebaseApp.getApps().isEmpty()) {
+			FileInputStream serviceAccount =
+					new FileInputStream("src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json");
+			FirebaseOptions options = FirebaseOptions.builder()
+					.setCredentials(GoogleCredentials.fromStream(serviceAccount))
+					.build();
+			FirebaseApp.initializeApp(options);
+		}
+
 		// 테스트용 음식점 저장
 		restaurantInstant = restaurantRepository.save(RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant());
 
@@ -98,8 +113,8 @@ public class ReservationConcurrencyTest {
 
 	@AfterEach
 	void afterEach() {
-		reservationRepository.deleteAll();
 		notificationRepository.deleteAll();
+		reservationRepository.deleteAll();
 		reservationSlotRepository.deleteAll();
 		restaurantRepository.deleteAll();
 		userRepository.deleteAll();
