@@ -1,5 +1,8 @@
 package com.goorm.ticker.reservation.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -152,5 +155,37 @@ public class ReservationService {
 		}
 		reservation.confirmReservation();
 		slot.updateAvailablePartySize(slot.getAvailablePartySize() - reservation.getPartySize());
+	}
+
+	@Transactional(readOnly = true)
+	public List<ReservationCreateResponse> getReservationsByUserAndStatus(Long userId, String status) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
+
+		List<Reservation> reservations;
+		if (status != null) {
+			status = status.toUpperCase();
+			ReservationStatus reservationStatus;
+			try {
+				reservationStatus = ReservationStatus.valueOf(status.toUpperCase());
+			} catch (IllegalArgumentException e) {
+				throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+			}
+			reservations = reservationRepository.findByUserAndStatus(user, reservationStatus);
+		} else {
+			reservations = reservationRepository.findByUser(user);
+		}
+
+		return reservations.stream()
+			.map(reservation -> ReservationCreateResponse.builder()
+				.reservationId(reservation.getReservationId())
+				.restaurantName(reservation.getRestaurant().getRestaurantName())
+				.username(user.getName())
+				.reservationDate(reservation.getReservationDate())
+				.reservationTime(reservation.getReservationSlot().getSlotTime())
+				.partySize(reservation.getPartySize())
+				.status(reservation.getStatus())
+				.build())
+			.collect(Collectors.toList());
 	}
 }

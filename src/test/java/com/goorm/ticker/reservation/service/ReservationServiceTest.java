@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.SoftAssertions.*;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
@@ -71,7 +72,7 @@ class ReservationServiceTest {
 		reservationSlotInstant = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantInstant);
 		reservationSlotManual = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantManual);
 		user = UserFixture.USER_FIXTURE_1.createUserWithId(1L);
-		reservationInstant = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurantInstant,
+		reservationInstant = ReservationFixture.RESERVATION_FIXTURE_2.createReservation(restaurantInstant,
 			reservationSlotInstant,
 			user);
 		reservationManual = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurantManual,
@@ -247,21 +248,21 @@ class ReservationServiceTest {
 	void testUpdateReservationStatusConfirmed() {
 		// Given
 
-		when(reservationRepository.findById(reservationInstant.getReservationId()))
-			.thenReturn(Optional.of(reservationInstant));
+		when(reservationRepository.findById(reservationManual.getReservationId()))
+			.thenReturn(Optional.of(reservationManual));
 
-		int initialAvailablePartySize = reservationSlotInstant.getAvailablePartySize();
+		int initialAvailablePartySize = reservationSlotManual.getAvailablePartySize();
 		when(userRepository.save(any())).thenReturn(user);
 		// When
 		ReservationCreateResponse response = reservationService.updateReservation(
-			reservationInstant.getReservationId(), "CONFIRMED", user.getId());
+			reservationManual.getReservationId(), "CONFIRMED", user.getId());
 
 		// Then
 		Assertions.assertThat(response).isNotNull();
 		Assertions.assertThat(response.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
-		Assertions.assertThat(reservationInstant.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
-		Assertions.assertThat(reservationSlotInstant.getAvailablePartySize())
-			.isEqualTo(initialAvailablePartySize - reservationInstant.getPartySize());
+		Assertions.assertThat(reservationManual.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+		Assertions.assertThat(reservationSlotManual.getAvailablePartySize())
+			.isEqualTo(initialAvailablePartySize - reservationManual.getPartySize());
 
 		verify(reservationRepository, times(1)).findById(reservationInstant.getReservationId());
 	}
@@ -476,5 +477,91 @@ class ReservationServiceTest {
 				assertThat(customException.getErrorCode().getMessage()).isEqualTo("해당 예약에 접근할 수 없습니다.");
 				assertThat(customException.getErrorCode().getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
 			});
+	}
+
+	@DisplayName("유효한 사용자 ID와 특정 상태값을 입력하면 해당 상태의 예약만 조회된다.")
+	@Test
+	void testGetReservationsByUserAndStatus_SuccessWithStatus() {
+		// Given
+		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+		when(reservationRepository.findByUserAndStatus(user, ReservationStatus.CONFIRMED))
+			.thenReturn(List.of(reservationInstant));
+		log.info("예약 상태: {}", reservationInstant.getStatus());
+
+		// When
+		List<ReservationCreateResponse> responses = reservationService.getReservationsByUserAndStatus(
+			user.getId(), "CONFIRMED");
+
+		// Then
+		assertThat(responses).hasSize(1);
+		assertThat(responses.get(0).getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+	}
+
+	@DisplayName("유효한 사용자 ID를 입력하지만 상태값을 입력하지 않으면 모든 예약이 조회된다.")
+	@Test
+	void testGetReservationsByUserAndStatus_SuccessWithoutStatus() {
+		// Given
+		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+		when(reservationRepository.findByUser(user))
+			.thenReturn(List.of(reservationInstant, reservationManual));
+
+		// When
+		List<ReservationCreateResponse> responses = reservationService.getReservationsByUserAndStatus(
+			user.getId(), null);
+
+		// Then
+		assertThat(responses).hasSize(2);
+	}
+
+	@DisplayName("유효하지 않은 사용자 ID를 입력하면 예외가 발생한다.")
+	@Test
+	void testGetReservationsByUserAndStatus_FailsWithInvalidUser() {
+		// Given
+		Long invalidUserId = 999L;
+		when(userRepository.findById(invalidUserId)).thenReturn(Optional.empty());
+
+		// When & Then
+		assertThatThrownBy(
+			() -> reservationService.getReservationsByUserAndStatus(invalidUserId, "CONFIRMED"))
+			.isInstanceOf(CustomException.class)
+			.satisfies(ex -> {
+				CustomException customException = (CustomException)ex;
+				Assertions.assertThat(customException.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND_USER);
+				Assertions.assertThat(customException.getErrorCode().getMessage())
+					.isEqualTo(ErrorCode.NOT_FOUND_USER.getMessage());
+			});
+	}
+
+	@DisplayName("유효하지 않은 상태값을 입력하면 예외가 발생한다.")
+	@Test
+	void testGetReservationsByUserAndStatus_FailsWithInvalidStatus() {
+		// Given
+		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+
+		// When & Then
+		assertThatThrownBy(
+			() -> reservationService.getReservationsByUserAndStatus(user.getId(), "INVALID_STATUS"))
+			.isInstanceOf(CustomException.class)
+			.satisfies(ex -> {
+				CustomException customException = (CustomException)ex;
+				Assertions.assertThat(customException.getErrorCode()).isEqualTo(ErrorCode.INVALID_RESERVATION_STATUS);
+				Assertions.assertThat(customException.getErrorCode().getMessage())
+					.isEqualTo(ErrorCode.INVALID_RESERVATION_STATUS.getMessage());
+			});
+	}
+
+	@DisplayName("사용자가 예약을 하나도 하지 않은 경우, 빈 리스트가 반환된다.")
+	@Test
+	void testGetReservationsByUserAndStatus_ReturnsEmptyList() {
+		// Given
+		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+		when(reservationRepository.findByUser(user)).thenReturn(List.of());
+
+		// When
+		List<ReservationCreateResponse> responses = reservationService.getReservationsByUserAndStatus(
+			user.getId(), null);
+
+		// Then
+		assertThat(responses).isEmpty();
 	}
 }
