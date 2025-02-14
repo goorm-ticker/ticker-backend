@@ -2,7 +2,9 @@ package com.goorm.ticker.reservation.integration;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -80,13 +82,18 @@ public class ReservationConcurrencyTest {
 				firebaseConfigPath = "src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json";
 			}
 
+			// JSON 파일 존재 여부 확인 로그 추가
+			File configFile = new File(firebaseConfigPath);
+			if (!configFile.exists()) {
+				throw new FileNotFoundException("Firebase config file not found: " + firebaseConfigPath);
+			}
+
 			FileInputStream serviceAccount = new FileInputStream(firebaseConfigPath);
 			FirebaseOptions options = FirebaseOptions.builder()
 					.setCredentials(GoogleCredentials.fromStream(serviceAccount))
 					.build();
 			FirebaseApp.initializeApp(options);
 		}
-
 
 		// 테스트용 음식점 저장
 		restaurantInstant = restaurantRepository.save(RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant());
