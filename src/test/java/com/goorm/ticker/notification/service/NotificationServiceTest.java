@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 public class NotificationServiceTest {
+
     @Autowired
     private NotificationService notificationService;
 
@@ -33,16 +32,19 @@ public class NotificationServiceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private FCMService fcmService;
+
     private User testUser;
 
     @BeforeEach
     void setUp() {
-            notificationRepository.deleteAll();
-            userRepository.deleteAll();
+        notificationRepository.deleteAll();
+        userRepository.deleteAll();
 
-            testUser = new User(null, "testUser", "testUser1", "password1234");
-            userRepository.save(testUser);
-        }
+        testUser = new User(null, "testUser", "testUser1", "password1234");
+        userRepository.save(testUser);
+    }
 
     @Test
     @DisplayName("알림을 생성한다.")
@@ -61,6 +63,7 @@ public class NotificationServiceTest {
     void getNotificationsTest() {
         NotificationRequest request1 = new NotificationRequest(testUser.getId(), "예약이 확정되었습니다.", NotificationType.RESERVATION_CONFIRMATION);
         NotificationRequest request2 = new NotificationRequest(testUser.getId(), "입장 가능합니다.", NotificationType.ENTRY_POSSIBLE);
+
         notificationService.createNotification(request1);
         notificationService.createNotification(request2);
 
@@ -79,8 +82,8 @@ public class NotificationServiceTest {
 
         notificationService.markAsRead(notification.getId());
 
-        Notification updateNotificcation = notificationRepository.findById(notification.getId()).orElseThrow();
-        assertTrue(updateNotificcation.isRead());
+        Notification updatedNotification = notificationRepository.findById(notification.getId()).orElseThrow();
+        assertTrue(updatedNotification.isRead());
     }
 
     @Test

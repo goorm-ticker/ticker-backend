@@ -2,8 +2,8 @@ package com.goorm.ticker.restaurant.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -35,14 +35,19 @@ public class Restaurant {
 	@Column(name = "max_waiting", nullable = false)
 	private Integer maxWaiting;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "reservation_policy", nullable = false)
+	private ReservationPolicy reservationPolicy;
 
-	public static Restaurant of(Long restaurantId,String restaurantName, String x, String y, Integer maxWaiting) {
+	public static Restaurant of(Long restaurantId, String restaurantName, String x, String y, Integer maxWaiting,
+		ReservationPolicy reservationPolicy) {
 		return Restaurant.builder()
-				.restaurantId(restaurantId)
-				.restaurantName(restaurantName)
-				.x(x)
-				.y(y)
-				.maxWaiting(maxWaiting)
-				.build();
+			.restaurantId(restaurantId)
+			.restaurantName(restaurantName)
+			.x(x)
+			.y(y)
+			.maxWaiting(maxWaiting)
+			.reservationPolicy(reservationPolicy)
+			.build();
 	}
 }

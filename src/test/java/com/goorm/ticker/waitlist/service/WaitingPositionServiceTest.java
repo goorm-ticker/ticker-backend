@@ -3,6 +3,7 @@ package com.goorm.ticker.waitlist.service;
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.restaurant.entity.Restaurant;
+import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
@@ -59,25 +60,26 @@ public class WaitingPositionServiceTest {
                 .thenReturn(1L);
 
         // when
-        int position = waitingPositionService.getUserWaitingPosition(1L,1L);
+        WaitingInfoResponseDto waitingIfo = waitingPositionService.getUserWaitingPosition(1L);
 
         // then
-        assertThat(position).isEqualTo(1);
+        assertThat(waitingIfo.waitingCount()).isEqualTo(1);
+        assertThat(waitingIfo.estimatedWaitTime()).isEqualTo(20);
     }
 
-    /*@Test
+    @Test
     @DisplayName("대기 순번 조회 실패 - 세션 없음 (SESSION_EXPIRED)")
     void getUserWaitingPosition_Fail_NoSession() {
         // given
         when(session.getAttribute("user")).thenReturn(null);
 
         // when & then
-        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L,1L))
+        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SESSION_EXPIRED);
-    }*/
+    }
 
-    /*@Test
+    @Test
     @DisplayName("대기 순번 조회 실패 - 대기열에 없는 사용자 (WAITINGLIST_NOT_FOUND)")
     void getUserWaitingPosition_Fail_NoWaitList() {
         // given
@@ -85,10 +87,10 @@ public class WaitingPositionServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L,1L))
+        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WAITLIST_NOT_FOUND);
-    }*/
+    }
 
     @Test
     @DisplayName("총 대기 인원 조회 성공")

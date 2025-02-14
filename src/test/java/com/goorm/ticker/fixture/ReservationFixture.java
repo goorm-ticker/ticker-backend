@@ -12,7 +12,7 @@ public enum ReservationFixture {
 	RESERVATION_FIXTURE_1(
 		4,
 		LocalDate.of(2025, 2, 22),
-		ReservationStatus.WAITING
+		ReservationStatus.PENDING
 	),
 	RESERVATION_FIXTURE_2(
 		2,
@@ -27,7 +27,7 @@ public enum ReservationFixture {
 	RESERVATION_FIXTURE_4(
 		2,
 		LocalDate.of(2025, 2, 22),
-		ReservationStatus.COMPLETED
+		ReservationStatus.ENTERED
 	);
 
 	private final Integer partySize;

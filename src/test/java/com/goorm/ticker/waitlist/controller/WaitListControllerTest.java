@@ -2,6 +2,7 @@ package com.goorm.ticker.waitlist.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goorm.ticker.map.service.MapService;
+import com.goorm.ticker.restaurant.entity.ReservationPolicy;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.restaurant.repository.RestaurantRepository;
 import com.goorm.ticker.user.entity.User;
@@ -61,11 +62,12 @@ public class WaitListControllerTest {
                 .build());
 
         Restaurant restaurant = restaurantRepository.save(Restaurant.builder()
-                        .restaurantId(1L)
+				.restaurantId(1L)
                 .restaurantName("test")
                 .x("testX")
                 .y("testY")
                 .maxWaiting(10)
+				.reservationPolicy(ReservationPolicy.INSTANT_CONFIRMATION)
                 .build());
 
         testRestaurantId = restaurant.getRestaurantId();
