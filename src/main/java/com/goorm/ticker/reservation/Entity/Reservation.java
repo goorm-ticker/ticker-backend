@@ -1,6 +1,7 @@
 package com.goorm.ticker.reservation.Entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.goorm.ticker.common.entity.BaseTimeEntity;
 import com.goorm.ticker.restaurant.entity.ReservationSlot;
@@ -57,16 +58,21 @@ public class Reservation extends BaseTimeEntity {
 	@Column(name = "status", nullable = false)
 	private ReservationStatus status;
 
+	@Column(name = "reservation_datetime", nullable = false)
+	private LocalDateTime reservationDateTime;
+
 	public static Reservation of(Restaurant restaurant, ReservationSlot reservationSlot, LocalDate reservationDate,
-		User user, Integer partySize, ReservationStatus status) {
+								 User user, Integer partySize, ReservationStatus status) {
 		return Reservation.builder()
-			.restaurant(restaurant)
-			.reservationSlot(reservationSlot)
-			.reservationDate(reservationDate)
-			.user(user)
-			.partySize(partySize)
-			.status(status)
-			.build();
+				.restaurant(restaurant)
+				.reservationSlot(reservationSlot)
+				.reservationDate(reservationDate)
+				.reservationDateTime(LocalDateTime.of(reservationDate, reservationSlot.getSlotTime())) // 예약 날짜 + 시간 설정
+				.user(user)
+				.partySize(partySize)
+				.status(status)
+				.build();
+
 	}
 
 	public void confirmReservation() {
