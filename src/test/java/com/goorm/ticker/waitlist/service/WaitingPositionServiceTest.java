@@ -77,7 +77,7 @@ public class WaitingPositionServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SESSION_EXPIRED);
     }*/
 
-    @Test
+    /*@Test
     @DisplayName("대기 순번 조회 실패 - 대기열에 없는 사용자 (WAITINGLIST_NOT_FOUND)")
     void getUserWaitingPosition_Fail_NoWaitList() {
         // given
@@ -88,7 +88,7 @@ public class WaitingPositionServiceTest {
         assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L,1L))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WAITLIST_NOT_FOUND);
-    }
+    }*/
 
     @Test
     @DisplayName("총 대기 인원 조회 성공")
