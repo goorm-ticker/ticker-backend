@@ -1,5 +1,7 @@
 package com.goorm.ticker.reservation.service;
 
+import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import com.goorm.ticker.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -27,6 +30,7 @@ public class ReservationService {
 	private final RestaurantRepository restaurantRepository;
 	private final ReservationSlotRepository reservationSlotRepository;
 	private final UserRepository userRepository;
+	private final ReservationStatusPublisher reservationStatusPublisher;
 
 	@Transactional
 	public ReservationCreateResponse reserve(ReservationCreateRequest request) {
@@ -62,8 +66,19 @@ public class ReservationService {
 			initialStatus
 		);
 
+		reservation = reservationRepository.save(reservation);
+
+		if (reservation.getReservationId() == null) {
+			throw new CustomException(ErrorCode.RESERVATION_NOT_FOUND);
+		}
+
+		log.info("예약 성공: reservationId={}", reservation.getReservationId());
+
 		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
 			slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
+
+			// 즉시 확정 예약 시 CONFIRM 알림 전송
+			reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), "CONFIRMED");
 		}
 
 		reservationRepository.save(reservation);
@@ -94,15 +109,26 @@ public class ReservationService {
 		}
 
 		if (reservation.getStatus() == newStatus || reservation.getStatus() == ReservationStatus.ENTERED
-			|| reservation.getStatus() == ReservationStatus.CANCELLED) {
+				|| reservation.getStatus() == ReservationStatus.CANCELLED) {
 			throw new CustomException(ErrorCode.RESERVATION_ALREADY_UPDATED);
 		}
 
 		// 예약 상태 업데이트
 		switch (newStatus) {
-			case CANCELLED -> handleCancellation(reservation);
+			case CANCELLED -> {
+				handleCancellation(reservation);
+				if (!isStatusAlreadyUpdated(reservationId, "CANCELLED")) {
+					reservationStatusPublisher.publishReservationStatus(reservationId, "CANCELLED");
+				}
+			}
 			case ENTERED -> handleEntry(reservation);
-			case CONFIRMED -> handleConfirmation(reservation);
+			case CONFIRMED -> {
+				handleConfirmation(reservation);
+				// PENDING -> CONFIRMED 변경 시 알림 전송
+				if (!isStatusAlreadyUpdated(reservationId, "CONFIRMED")) {
+					reservationStatusPublisher.publishReservationStatus(reservationId, "CONFIRMED");
+				}
+			}
 			default -> throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
@@ -136,5 +162,15 @@ public class ReservationService {
 		}
 		reservation.confirmReservation();
 		slot.updateAvailablePartySize(slot.getAvailablePartySize() - reservation.getPartySize());
+	}
+
+	public boolean isStatusAlreadyUpdated(Long reservationId, String status) {
+		Reservation reservation = reservationRepository.findById(reservationId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+		return reservation.getStatus().name().equals(status);
+	}
+
+	public boolean existsById(Long reservationId) {
+		return reservationRepository.existsById(reservationId);
 	}
 }
