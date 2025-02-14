@@ -30,11 +30,13 @@ public class WaitListController {
     }
 
     @Operation(summary = "대기 순번 조회", description = "사용자의 현재 대기 순번과 예상 대기 시간을 반환합니다.")
-    @GetMapping("/{restaurantId}/position")
+    @GetMapping("/{restaurantId}/position/{userId}")
     public ResponseEntity<WaitingInfoResponseDto> getUserWaitingPosition(
             @Parameter(description = "조회할 식당 ID", required = true)
-            @PathVariable("restaurantId") Long restaurantId) {
-        WaitingInfoResponseDto waitingInfo = waitingPositionService.getUserWaitingPosition(restaurantId);
+            @PathVariable("restaurantId") Long restaurantId,
+            @Parameter(description = "조회할 사용자 ID", required = true)
+            @PathVariable("userId") Long userId) {
+        WaitingInfoResponseDto waitingInfo = waitingPositionService.getUserWaitingPosition(restaurantId,userId);
         return ResponseEntity.ok(waitingInfo);
     }
 

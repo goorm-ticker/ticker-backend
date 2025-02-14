@@ -20,19 +20,27 @@ public class WaitingPositionService {
     private final WaitListRepository waitListRepository;
     private final HttpSession httpSession;
 
-    public WaitingInfoResponseDto getUserWaitingPosition(Long restaurantId) {
+    public WaitingInfoResponseDto getUserWaitingPosition(Long restaurantId, Long userId) {
         // 세션에서 사용자 ID 가져오기
-        Long userId = getSessionUserId();
+        //Long userId = getSessionUserId();
 
+        WaitList userWaitList;
+        int usersAhead;
+        int estimatedWaitTime;
         // 현재 대기 중인 식당 및 대기번호 조회
-        WaitList userWaitList = findUserWaitingList(restaurantId, userId);
+        try {
+            userWaitList = findUserWaitingList(restaurantId, userId);
 
-        // 앞에 대기 중인 사용자 수 계산
-        int usersAhead = countUserAhead(userWaitList);
+            // 앞에 대기 중인 사용자 수 계산
+            usersAhead = countUserAhead(userWaitList);
 
-        // 예상 대기시간 계산 (대기번호당 20분)
-        int estimatedWaitTime = usersAhead * WAIT_TIME_PER_PERSON;
-
+            // 예상 대기시간 계산 (대기번호당 20분)
+            estimatedWaitTime = usersAhead * WAIT_TIME_PER_PERSON;
+        }
+        catch (CustomException e){
+            usersAhead = -1;
+            estimatedWaitTime = -1;
+        }
         // 앞의 대기 중인 사용자 수 반환
         return new WaitingInfoResponseDto(usersAhead, estimatedWaitTime);
     }
