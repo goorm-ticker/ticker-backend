@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +66,8 @@ public class ReservationControllerTest {
 	private ReservationSlot reservationSlot;
 	private User user;
 	private Reservation reservation;
+	private Restaurant restaurant2;
+	private ReservationSlot reservationSlot2;
 
 	@BeforeEach
 	void setUp() {
@@ -79,6 +82,9 @@ public class ReservationControllerTest {
 		// 식당 및 예약 슬롯 데이터 설정
 		restaurant = RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant();
 		reservationSlot = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurant);
+
+		restaurant2 = RestaurantFixture.RESTAURANT_FIXTURE_2.createRestaurant();
+		reservationSlot2 = ReservationSlotFixture.SLOT_FIXTURE_2.createSlot(restaurant2);
 	}
 
 	@DisplayName("POST /reservations - 예약 생성 성공")
@@ -207,5 +213,76 @@ public class ReservationControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isUnauthorized());
+	}
+
+	@DisplayName("예약 목록 조회 성공 - 특정 상태 값 제공 (CONFIRMED)")
+	@Test
+	void testGetReservations_SuccessWithStatus() throws Exception {
+		// Given
+		String status = "CONFIRMED";
+		List<ReservationCreateResponse> mockResponses = List.of(
+			ReservationCreateResponse.builder()
+				.reservationId(1L)
+				.restaurantName(restaurant.getRestaurantName())
+				.username(user.getName())
+				.reservationDate(LocalDate.now())
+				.reservationTime(reservationSlot.getSlotTime())
+				.partySize(2)
+				.status(ReservationStatus.CONFIRMED)
+				.build()
+		);
+
+		when(reservationService.getReservationsByUserAndStatus(user.getId(), status)).thenReturn(mockResponses);
+
+		// When & Then
+		mockMvc.perform(get("/reservations")
+				.param("status", status)
+				.session(session)
+				.contentType(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.size()").value(1))
+			.andExpect(jsonPath("$[0].status").value(status))
+			.andExpect(jsonPath("$[0].restaurantName").value(restaurant.getRestaurantName()));
+
+		verify(reservationService, times(1)).getReservationsByUserAndStatus(user.getId(), status);
+	}
+
+	@DisplayName("예약 목록 조회 성공 - 상태 값 없이 전체 조회")
+	@Test
+	void testGetReservations_SuccessWithoutStatus() throws Exception {
+		// Given
+		List<ReservationCreateResponse> mockResponses = List.of(
+			ReservationCreateResponse.builder()
+				.reservationId(1L)
+				.restaurantName(restaurant.getRestaurantName())
+				.username(user.getName())
+				.reservationDate(LocalDate.now())
+				.reservationTime(reservationSlot.getSlotTime())
+				.partySize(2)
+				.status(ReservationStatus.CONFIRMED)
+				.build(),
+			ReservationCreateResponse.builder()
+				.reservationId(2L)
+				.restaurantName(restaurant2.getRestaurantName())
+				.username(user.getName())
+				.reservationDate(LocalDate.now())
+				.reservationTime(reservationSlot2.getSlotTime())
+				.partySize(3)
+				.status(ReservationStatus.CANCELLED)
+				.build()
+		);
+
+		when(reservationService.getReservationsByUserAndStatus(user.getId(), null)).thenReturn(mockResponses);
+
+		// When & Then
+		mockMvc.perform(get("/reservations")
+				.session(session)
+				.contentType(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.size()").value(2))
+			.andExpect(jsonPath("$[0].restaurantName").value("Test Restaurant 1"))
+			.andExpect(jsonPath("$[1].status").value("CANCELLED"));
+
+		verify(reservationService, times(1)).getReservationsByUserAndStatus(user.getId(), null);
 	}
 }
