@@ -75,13 +75,18 @@ public class ReservationConcurrencyTest {
 	void setUp() throws IOException {
 		// Firebase 초기화
 		if (FirebaseApp.getApps().isEmpty()) {
-			FileInputStream serviceAccount =
-					new FileInputStream("src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json");
+			String firebaseConfigPath = System.getenv("FIREBASE_CONFIG_PATH");
+			if (firebaseConfigPath == null || firebaseConfigPath.isBlank()) {
+				firebaseConfigPath = "src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json";
+			}
+
+			FileInputStream serviceAccount = new FileInputStream(firebaseConfigPath);
 			FirebaseOptions options = FirebaseOptions.builder()
 					.setCredentials(GoogleCredentials.fromStream(serviceAccount))
 					.build();
 			FirebaseApp.initializeApp(options);
 		}
+
 
 		// 테스트용 음식점 저장
 		restaurantInstant = restaurantRepository.save(RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant());
