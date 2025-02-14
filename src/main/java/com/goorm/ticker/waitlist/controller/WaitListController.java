@@ -29,11 +29,13 @@ public class WaitListController {
     }
 
     @Operation(summary = "대기 순번 조회", description = "사용자의 현재 대기 순번을 반환합니다.")
-    @GetMapping("/{restaurantId}/position")
+    @GetMapping("/{restaurantId}/position/{userId}")
     public ResponseEntity<Integer> getUserWaitingPosition(
             @Parameter(description = "조회할 식당 ID", required = true)
-            @PathVariable("restaurantId") Long restaurantId) {
-        int position = waitingPositionService.getUserWaitingPosition(restaurantId);
+            @PathVariable("restaurantId") Long restaurantId,
+            @Parameter(description = "조회할 회원 ID", required = true)
+            @PathVariable("userId") Long userId) {
+        int position = waitingPositionService.getUserWaitingPosition(restaurantId,userId);
         return ResponseEntity.ok(position);
     }
 

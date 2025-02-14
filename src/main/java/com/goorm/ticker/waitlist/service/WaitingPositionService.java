@@ -16,12 +16,16 @@ public class WaitingPositionService {
     private final WaitListRepository waitListRepository;
     private final HttpSession httpSession;
 
-    public int getUserWaitingPosition(Long restaurantId) {
+    public int getUserWaitingPosition(Long restaurantId, Long userId) {
         // 세션에서 사용자 ID 가져오기
-        Long userId = getSessionUserId();
-
+        WaitList userWaitList;
         // 현재 대기 중인 식당 및 대기번호 조회
-        WaitList userWaitList = findUserWaitingList(restaurantId, userId);
+        try {
+            userWaitList = findUserWaitingList(restaurantId, userId);
+        }
+        catch (CustomException e){
+            return -1;
+        }
 
         // 앞의 대기 중인 사용자 수 반환
         return countUserAhead(userWaitList);
