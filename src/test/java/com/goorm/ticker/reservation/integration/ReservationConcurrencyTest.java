@@ -74,27 +74,7 @@ public class ReservationConcurrencyTest {
 	private List<ReservationSlot> testSlots = new ArrayList<>();
 
 	@BeforeEach
-	void setUp() throws IOException {
-		// Firebase 초기화
-		if (FirebaseApp.getApps().isEmpty()) {
-			String firebaseConfigPath = System.getenv("FIREBASE_CONFIG_PATH");
-			if (firebaseConfigPath == null || firebaseConfigPath.isBlank()) {
-				firebaseConfigPath = "src/main/resources/ticker-d92f7-firebase-adminsdk-fbsvc-7b468ffbee.json";
-			}
-
-			// JSON 파일 존재 여부 확인 로그 추가
-			File configFile = new File(firebaseConfigPath);
-			if (!configFile.exists()) {
-				throw new FileNotFoundException("Firebase config file not found: " + firebaseConfigPath);
-			}
-
-			FileInputStream serviceAccount = new FileInputStream(firebaseConfigPath);
-			FirebaseOptions options = FirebaseOptions.builder()
-					.setCredentials(GoogleCredentials.fromStream(serviceAccount))
-					.build();
-			FirebaseApp.initializeApp(options);
-		}
-
+	void setUp() {
 		// 테스트용 음식점 저장
 		restaurantInstant = restaurantRepository.save(RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant());
 
