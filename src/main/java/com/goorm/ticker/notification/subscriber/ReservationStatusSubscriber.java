@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goorm.ticker.notification.entity.NotificationType;
 import com.goorm.ticker.notification.service.NotificationService;
+import com.goorm.ticker.reservation.Entity.Reservation;
 import com.goorm.ticker.reservation.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +62,9 @@ public class ReservationStatusSubscriber implements MessageListener {
             log.error("예약 상태 변경 메시지 처리 오류: {}", e.getMessage());
         }
     }
+
     private boolean isMessageFromSchedulerOrAPI(Long reservationId, String status) {
-        return reservationService.isStatusAlreadyUpdated(reservationId, status);
+        Reservation reservation = reservationService.getReservationById(reservationId);
+        return reservationService.isStatusAlreadyUpdated(reservation, status);
     }
 }
