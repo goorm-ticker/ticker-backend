@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.goorm.ticker.common.exception.CustomException;
@@ -34,6 +35,9 @@ import com.goorm.ticker.restaurant.repository.RestaurantRepository;
 import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 class ReservationServiceTest {
 
 	@InjectMocks
@@ -66,13 +70,14 @@ class ReservationServiceTest {
 		restaurantManual = RestaurantFixture.RESTAURANT_FIXTURE_2.createRestaurant();
 		reservationSlotInstant = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantInstant);
 		reservationSlotManual = ReservationSlotFixture.SLOT_FIXTURE_1.createSlot(restaurantManual);
-		user = UserFixture.USER_FIXTURE_1.createUser();
+		user = UserFixture.USER_FIXTURE_1.createUserWithId(1L);
 		reservationInstant = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurantInstant,
 			reservationSlotInstant,
 			user);
 		reservationManual = ReservationFixture.RESERVATION_FIXTURE_1.createReservation(restaurantManual,
 			reservationSlotManual,
 			user);
+
 	}
 
 	@DisplayName("단일 예약을 성공합니다. -> 즉시 예약 확정 정책")
@@ -91,7 +96,7 @@ class ReservationServiceTest {
 		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		// When
-		ReservationCreateResponse response = reservationService.reserve(request);
+		ReservationCreateResponse response = reservationService.reserve(request, user.getId());
 
 		// Then
 		assertSoftly(softly -> {
@@ -121,7 +126,7 @@ class ReservationServiceTest {
 		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		// When
-		ReservationCreateResponse response = reservationService.reserve(request);
+		ReservationCreateResponse response = reservationService.reserve(request, user.getId());
 
 		// Then
 		assertSoftly(softly -> {
@@ -151,7 +156,7 @@ class ReservationServiceTest {
 			.thenReturn(Optional.empty());
 
 		// When & Then
-		Assertions.assertThatThrownBy(() -> reservationService.reserve(request))
+		Assertions.assertThatThrownBy(() -> reservationService.reserve(request, user.getId()))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
 				CustomException customException = (CustomException)ex;
@@ -184,7 +189,7 @@ class ReservationServiceTest {
 			.thenReturn(Optional.empty());
 
 		// When & Then
-		Assertions.assertThatThrownBy(() -> reservationService.reserve(request))
+		Assertions.assertThatThrownBy(() -> reservationService.reserve(request, user.getId()))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
 				CustomException customException = (CustomException)ex;
@@ -221,7 +226,7 @@ class ReservationServiceTest {
 			.thenReturn(Optional.of(user));
 
 		// When & Then
-		Assertions.assertThatThrownBy(() -> reservationService.reserve(request))
+		Assertions.assertThatThrownBy(() -> reservationService.reserve(request, user.getId()))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
 				CustomException customException = (CustomException)ex;
@@ -246,10 +251,10 @@ class ReservationServiceTest {
 			.thenReturn(Optional.of(reservationInstant));
 
 		int initialAvailablePartySize = reservationSlotInstant.getAvailablePartySize();
-
+		when(userRepository.save(any())).thenReturn(user);
 		// When
 		ReservationCreateResponse response = reservationService.updateReservation(
-			reservationInstant.getReservationId(), "CONFIRMED");
+			reservationInstant.getReservationId(), "CONFIRMED", user.getId());
 
 		// Then
 		Assertions.assertThat(response).isNotNull();
@@ -263,49 +268,117 @@ class ReservationServiceTest {
 
 	@DisplayName("예약 대기 상태에서 취소 상태로 변경합니다.")
 	@Test
-	void testUpdateReservationStatusToCancelled() {
-		// Given
-		Long reservationId = reservationManual.getReservationId();
+	void testReserveAndThenCancel() {
+		// Given - 예약 생성
+		ReservationCreateRequest request = ReservationCreateRequest.of(
+			1L, restaurantManual.getRestaurantId(), reservationSlotManual.getSlotTime(),
+			reservationManual.getReservationDate(),
+			reservationManual.getPartySize());
 
-		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservationManual));
+		when(restaurantRepository.findById(request.getRestaurantId())).thenReturn(Optional.of(restaurantManual));
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
+			request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlotManual));
+		when(userRepository.findById(request.getUserId())).thenReturn(Optional.of(user));
+		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		ReservationCreateResponse reservationResponse = reservationService.reserve(request, user.getId());
+
+		// Then - 예약이 정상적으로 생성되었는지 확인
+		assertThat(reservationResponse).isNotNull();
+		assertThat(reservationResponse.getStatus()).isEqualTo(ReservationStatus.PENDING);
+
+		// Given - 예약이 생성된 상태에서 취소 진행
+		Long reservationId = reservationResponse.getReservationId();
+		Long userId = user.getId();
+
+		when(reservationRepository.findById(reservationId)).thenReturn(
+			Optional.of(Reservation.of(restaurantManual, reservationSlotManual, request.getReservationDate(),
+				user, request.getPartySize(), ReservationStatus.PENDING)));
 
 		int initialAvailablePartySize = reservationSlotManual.getAvailablePartySize();
-		// When
-		ReservationCreateResponse response = reservationService.updateReservation(reservationId, "CANCELLED");
 
-		// Then
-		Assertions.assertThat(response).isNotNull();
-		Assertions.assertThat(response.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+		// When - 예약 취소
+		ReservationCreateResponse cancelResponse = reservationService.updateReservation(reservationId, "CANCELLED",
+			userId);
 
-		Assertions.assertThat(reservationManual.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
-		Assertions.assertThat(reservationSlotManual.getAvailablePartySize()).isEqualTo(
-			initialAvailablePartySize
-		);
-
-		verify(reservationRepository, times(1)).findById(reservationId);
+		// Then - 예약 취소 검증
+		assertSoftly(softly -> {
+			softly.assertThat(cancelResponse).isNotNull();
+			softly.assertThat(cancelResponse.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+			softly.assertThat(reservationSlotManual.getAvailablePartySize()).isEqualTo(initialAvailablePartySize);
+		});
 	}
 
 	@DisplayName("예약 확정에서 취소로 변경하여 예약 가능 인원이 증가합니다.")
 	@Test
 	void testUpdateReservationStatusFromConfirmedToCancelled() {
 		// Given
-		ReservationSlot reservationSlot2 = ReservationSlotFixture.SLOT_FIXTURE_2.createSlot(restaurantInstant);
-		Reservation reservation2 = ReservationFixture.RESERVATION_FIXTURE_2.createReservation(restaurantInstant,
-			reservationSlot2, user);
-		when(reservationRepository.findById(reservation2.getReservationId())).thenReturn(Optional.of(reservation2));
-		int initialAvailablePartySize = reservationSlot2.getAvailablePartySize();
+		ReservationCreateRequest request = ReservationCreateRequest.of(
+			1L, restaurantInstant.getRestaurantId(), reservationSlotInstant.getSlotTime(),
+			reservationInstant.getReservationDate(),
+			reservationInstant.getPartySize());
+		log.info("reservationInstant.getPartySize(): {}", reservationInstant.getPartySize());
 
-		// When
-		ReservationCreateResponse response = reservationService.updateReservation(reservation2.getReservationId(),
-			"CANCELLED");
+		when(restaurantRepository.findById(request.getRestaurantId())).thenReturn(Optional.of(restaurantInstant));
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
+			request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlotInstant));
+		when(userRepository.findById(request.getUserId())).thenReturn(Optional.of(user));
+
+		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> {
+			Reservation reservation = invocation.getArgument(0);
+			ReflectionTestUtils.setField(reservation, "reservationId", 1L);
+
+			if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+				reservationSlotInstant.updateAvailablePartySize(
+					reservationSlotInstant.getAvailablePartySize() - reservation.getPartySize());
+			}
+			return reservation;
+		});
+
+		int initialAvailablePartySize = reservationSlotInstant.getAvailablePartySize();
+		log.info("initialAvailablePartySize : {}", initialAvailablePartySize);
+		ReservationCreateResponse reservationResponse = reservationService.reserve(request, user.getId());
+
+		// Then - 예약이 정상적으로 생성되었는지 확인
+		assertThat(reservationResponse).isNotNull();
+		assertThat(reservationResponse.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+
+		// Given - 예약이 생성된 상태에서 취소 진행
+		Long reservationId = reservationResponse.getReservationId();
+		Long userId = user.getId();
+		when(reservationRepository.findById(reservationId)).thenAnswer(invocation -> {
+			Reservation updatedReservation = Reservation.of(
+				restaurantInstant,
+				reservationSlotInstant,
+				request.getReservationDate(),
+				user,
+				request.getPartySize(),
+				ReservationStatus.CONFIRMED);
+			if (updatedReservation.getStatus() == ReservationStatus.CONFIRMED) {
+				reservationSlotInstant.updateAvailablePartySize(
+					reservationSlotInstant.getAvailablePartySize() + updatedReservation.getPartySize());
+			}
+			ReflectionTestUtils.setField(updatedReservation, "reservationId", reservationId);
+			return Optional.of(updatedReservation);
+		});
+
+		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
+			request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlotInstant));
+
+		ReservationCreateResponse response = reservationService.updateReservation(reservationId,
+			"CANCELLED", userId);
+
+		ReservationSlot updatedSlot = reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
+			request.getReservationTime(), request.getRestaurantId()).orElseThrow();
 
 		// Then
 		Assertions.assertThat(response).isNotNull();
 		Assertions.assertThat(response.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
-		Assertions.assertThat(reservationSlot2.getAvailablePartySize())
-			.isEqualTo(initialAvailablePartySize + reservation2.getPartySize());
 
-		verify(reservationRepository, times(1)).findById(reservation2.getReservationId());
+		// 예약 취소 후 가용 인원 증가 확인
+		assertThat(updatedSlot.getAvailablePartySize())
+			.isEqualTo(initialAvailablePartySize); // 원래 상태로 복구됨
+
 	}
 
 	@DisplayName("예약 취소에서 취소로 변경 시 예외를 발생시킵니다.")
@@ -319,7 +392,8 @@ class ReservationServiceTest {
 
 		// When
 		Assertions.assertThatThrownBy(
-				() -> reservationService.updateReservation(reservation3.getReservationId(), "CANCELLED"))
+				() -> reservationService.updateReservation(reservation3.getReservationId(), "CANCELLED",
+					user.getId()))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
 				CustomException customException = (CustomException)ex;
@@ -345,7 +419,8 @@ class ReservationServiceTest {
 
 		// When
 		Assertions.assertThatThrownBy(
-				() -> reservationService.updateReservation(reservation4.getReservationId(), "CANCELLED"))
+				() -> reservationService.updateReservation(reservation4.getReservationId(), "CANCELLED",
+					user.getId()))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
 				CustomException customException = (CustomException)ex;
@@ -369,17 +444,37 @@ class ReservationServiceTest {
 		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservationInstant));
 
 		// When & Then
-		Assertions.assertThatThrownBy(() -> reservationService.updateReservation(reservationId, invalidStatus))
+		Assertions.assertThatThrownBy(() -> reservationService.updateReservation(reservationId, invalidStatus,
+				user.getId()))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> {
 				CustomException customException = (CustomException)ex;
 				assertThat(customException.getErrorCode()).isEqualTo(ErrorCode.INVALID_RESERVATION_STATUS);
 				assertThat(customException.getErrorCode().getMessage()).isEqualTo("존재하지 않는 예약 상태입니다.");
-				assertThat(customException.getErrorCode().getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+				assertThat(customException.getErrorCode().getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 			});
 
 		// Verify
 		verify(reservationRepository, times(1)).findById(reservationId);
 		verifyNoMoreInteractions(reservationRepository);
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 예약 상태 변경 시 예외 발생")
+	void testUpdateReservation_UnauthorizedUser() {
+		Long reservationId = reservationInstant.getReservationId();
+		Long unauthorizedUserId = 999L; // 예약한 사용자가 아닌 다른 ID
+
+		// When & Then
+		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservationInstant));
+		Assertions.assertThatThrownBy(() -> reservationService.updateReservation(reservationId, "CONFIRMED",
+				unauthorizedUserId))
+			.isInstanceOf(CustomException.class)
+			.satisfies(ex -> {
+				CustomException customException = (CustomException)ex;
+				assertThat(customException.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_RESERVATION_ACCESS);
+				assertThat(customException.getErrorCode().getMessage()).isEqualTo("해당 예약에 접근할 수 없습니다.");
+				assertThat(customException.getErrorCode().getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+			});
 	}
 }

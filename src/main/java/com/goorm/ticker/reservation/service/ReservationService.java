@@ -19,9 +19,11 @@ import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReservationService {
 	private final ReservationRepository reservationRepository;
 	private final RestaurantRepository restaurantRepository;
@@ -29,7 +31,7 @@ public class ReservationService {
 	private final UserRepository userRepository;
 
 	@Transactional
-	public ReservationCreateResponse reserve(ReservationCreateRequest request) {
+	public ReservationCreateResponse reserve(ReservationCreateRequest request, Long userId) {
 
 		// 음식점 조회
 		Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
@@ -45,7 +47,7 @@ public class ReservationService {
 			throw new CustomException(ErrorCode.PARTY_SIZE_EXCEEDED);
 		}
 
-		User user = userRepository.findById(request.getUserId())
+		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
 		ReservationStatus initialStatus = switch (restaurant.getReservationPolicy()) {
@@ -63,10 +65,15 @@ public class ReservationService {
 		);
 
 		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
-			slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
+			// 원자적으로 가용 인원 감소
+			reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
 		}
 
 		reservationRepository.save(reservation);
+
+		log.info("[O] 예약 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
+			reservation.getUser().getId(), reservation.getReservationId(),
+			reservation.getReservationSlot().getAvailablePartySize());
 
 		return ReservationCreateResponse.builder()
 			.reservationId(reservation.getReservationId())
@@ -80,10 +87,14 @@ public class ReservationService {
 	}
 
 	@Transactional
-	public ReservationCreateResponse updateReservation(Long reservationId, String status) {
+	public ReservationCreateResponse updateReservation(Long reservationId, String status, Long userId) {
 		// 예약 조회
 		Reservation reservation = reservationRepository.findById(reservationId)
 			.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+		if (!reservation.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.FORBIDDEN_RESERVATION_ACCESS);
+		}
 
 		// 예약 상태 확인
 		ReservationStatus newStatus;
@@ -119,10 +130,15 @@ public class ReservationService {
 
 	private void handleCancellation(Reservation reservation) {
 		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-			ReservationSlot slot = reservation.getReservationSlot();
-			slot.updateAvailablePartySize(slot.getAvailablePartySize() + reservation.getPartySize());
+			// 원자적으로 가용 인원 증가
+			reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
+				reservation.getPartySize());
 		}
 		reservation.cancelReservation();
+		log.info("[O] 취소 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
+			reservation.getUser().getId(), reservation.getReservationId(),
+			reservation.getReservationSlot().getAvailablePartySize());
+
 	}
 
 	private void handleEntry(Reservation reservation) {
