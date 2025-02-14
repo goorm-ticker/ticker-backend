@@ -13,6 +13,7 @@ public class MapUpdateDto {
     private String y;
     private Long waiting;
     private Long myWaiting;
+    private Long waitingTime;
 
     @Builder
     public MapUpdateDto(Long restaurantId, String restaurantName, String x, String y, Long waiting) {
@@ -23,8 +24,9 @@ public class MapUpdateDto {
         this.waiting = waiting;
     }
 
-    public void setMyWaiting(int myWaiting){
+    public void setMyWaiting(int myWaiting, int waitingTime){
         this.myWaiting = (long) myWaiting;
+        this.waitingTime = (long) waitingTime;
     }
 
 }

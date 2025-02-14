@@ -6,6 +6,7 @@ import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.map.dto.MapUpdateDto;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.restaurant.repository.RestaurantRepository;
+import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
 
 import com.goorm.ticker.waitlist.service.WaitingPositionService;
@@ -58,8 +59,9 @@ public class MapService {
         단일 식당 조회 시, 현재 조회 중인 음식점들의 대기열과 본인의 대기열을 제공
          */
         if(restaurantId.size()==1){
-            int myWaiting = waitingPositionService.getUserWaitingPosition(restaurantId.get(0),userId);
-            dto.get(0).setMyWaiting(myWaiting);
+             WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.getUserWaitingPosition(restaurantId.get(0),userId);
+
+            dto.get(0).setMyWaiting(waitingInfoResponseDto.waitingCount(),waitingInfoResponseDto.estimatedWaitTime());
         }
         log.info("음식점 등록 및 대기열 조회 성공");
         try {
@@ -131,8 +133,8 @@ public class MapService {
                 .build();
         for(Long user : viewer.get(restaurantId)){
             try {
-                int myWaiting = waitingPositionService.getUserWaitingPosition(restaurantId,user);
-                mapUpdateDto.setMyWaiting(myWaiting);
+                WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.getUserWaitingPosition(restaurantId,user);
+                mapUpdateDto.setMyWaiting(waitingInfoResponseDto.waitingCount(),waitingInfoResponseDto.estimatedWaitTime());
                 emitters.get(user).send(SseEmitter.event().name("update").id(user.toString()).data(objectMapper.writeValueAsString(mapUpdateDto)));
             }
             catch (Exception e){
