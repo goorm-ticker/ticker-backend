@@ -314,7 +314,6 @@ class ReservationServiceTest {
 		when(reservationSlotRepository.findBySlotTimeAndRestaurantIdWithLock(
 				request.getReservationTime(), request.getRestaurantId())).thenReturn(Optional.of(reservationSlotManual));
 		when(userRepository.findById(request.getUserId())).thenReturn(Optional.of(user));
-		when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		ReservationCreateResponse reservationResponse = reservationService.reserve(request, user.getId());
 
@@ -333,20 +332,20 @@ class ReservationServiceTest {
 		int initialAvailablePartySize = reservationSlotManual.getAvailablePartySize();
 
 		// When - 예약 취소
-		ReservationCreateResponse cancelResponse = reservationService.updateReservation(reservationId, "CANCELLED",
-				userId);
+		ReservationCreateResponse cancelResponse = reservationService.updateReservation(reservationId, "CANCELLED", userId);
 
-		// Then
-		Assertions.assertThat(reservationManual.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+		// Then - 상태가 CANCELLED로 변경되었는지 확인
+		assertThat(cancelResponse).isNotNull();
+		assertThat(cancelResponse.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
 		Assertions.assertThat(reservationSlotManual.getAvailablePartySize()).isEqualTo(
 				initialAvailablePartySize
 		);
 
+		verify(reservationRepository, times(1)).saveAndFlush(any(Reservation.class));
+
 		verify(reservationRepository, atMost(2)).findById(reservationId);
-		verify(reservationRepository, atMost(2)).save(reservationManual);
-		verify(reservationStatusPublisher, atLeastOnce()).publishReservationStatus(
-				reservationManual.getReservationId(), "CANCELLED"
-		);
+		verify(reservationRepository, atMost(2)).save(any(Reservation.class));
+		verify(reservationStatusPublisher, atLeastOnce()).publishReservationStatus(anyLong(), eq("CANCELLED"));
 
 		// Then - 예약 취소 검증
 		assertSoftly(softly -> {
