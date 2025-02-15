@@ -2,22 +2,20 @@ package com.goorm.ticker.reservation.integration;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
 import com.goorm.ticker.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,9 +27,12 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.goorm.ticker.common.exception.CustomException;
+import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.fixture.ReservationSlotFixture;
 import com.goorm.ticker.fixture.RestaurantFixture;
+import com.goorm.ticker.reservation.Entity.ReservationStatus;
 import com.goorm.ticker.reservation.dto.request.ReservationCreateRequest;
+import com.goorm.ticker.reservation.dto.response.ReservationCreateResponse;
 import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.reservation.service.ReservationService;
 import com.goorm.ticker.restaurant.entity.ReservationSlot;
@@ -87,10 +88,10 @@ public class ReservationConcurrencyTest {
 		List<User> users = new ArrayList<>();
 		for (int i = 0; i < THREAD_COUNT; i++) {
 			users.add(User.builder()
-				.loginId("loginId" + (i))
-				.name("name" + (i))
-				.password("password" + (i))
-				.build());
+					.loginId("loginId" + (i))
+					.name("name" + (i))
+					.password("password" + (i))
+					.build());
 		}
 		List<User> savedUsers = userRepository.saveAll(users);
 		userRepository.flush();
@@ -135,19 +136,17 @@ public class ReservationConcurrencyTest {
 			executorService.execute(() -> {
 				try {
 					ReservationCreateRequest request = ReservationCreateRequest.of(
-						(index),
-						restaurantId,
-						reservationTime,
-						reservationDate,
-						partySize);
-					reservationService.reserve(request);
+							(index),
+							restaurantId,
+							reservationTime,
+							reservationDate,
+							partySize);
+					reservationService.reserve(request, index);
 					successCount.incrementAndGet();
-					log.info("[O] 성공 - 유저 ID: {} | 예약 일시 : {} {}", (index), reservationDate,
-						reservationTime);
 				} catch (CustomException e) {
 					failureCount.incrementAndGet();
 					log.warn("[X] 실패 - 유저 ID: {} | 에러 코드: {} | {} ", (index), e.getErrorCode(),
-						e.getErrorCode().getMessage());
+							e.getErrorCode().getMessage());
 				} finally {
 					latch.countDown();
 				}
@@ -156,18 +155,150 @@ public class ReservationConcurrencyTest {
 
 		latch.await();
 		executorService.shutdown();
-		log.info("--------------------------------------------");
 		long endTime = System.currentTimeMillis();
 
-		log.info("실행 시간: {} ms", (endTime - startTime));
-		log.info("예약 성공: {}", successCount.get());
-		log.warn("예약 실패: {}", failureCount.get());
+		long totalReservations = reservationRepository.countByStatus(ReservationStatus.CONFIRMED);
 
-		// DB에서 실제 예약된 건수 확인
-		long totalReservations = reservationRepository.count();
-		log.info("실제 DB 예약 건수: {}", totalReservations);
+		logReservationResults(successCount, failureCount, totalReservations, "예약");
+		log.info("실행 시간: {} ms", (endTime - startTime));
 
 		assertThat(successCount.get()).isEqualTo(testSlots.get(0).getAvailablePartySize() / partySize);
 		assertThat(totalReservations).isEqualTo(testSlots.get(0).getAvailablePartySize() / partySize);
+	}
+
+	@Test
+	@DisplayName("예약과 취소가 동시에 실행되면서 정합성이 유지되는지 테스트")
+	void testConcurrentReservationAndCancellation() throws InterruptedException, ExecutionException {
+		int threadCount = 100; // 동시 실행할 요청 개수
+		ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+		CountDownLatch latch = new CountDownLatch(threadCount); // 모든 작업이 끝날 때까지 대기
+
+		Long restaurantId = restaurantInstant.getRestaurantId();
+		LocalTime reservationTime = LocalTime.of(12, 0);
+		LocalDate reservationDate = LocalDate.now();
+		int partySize = 2;
+
+		AtomicInteger successReservationCount = new AtomicInteger(0);
+		AtomicInteger failureReservationCount = new AtomicInteger(0);
+		AtomicInteger successCancelCount = new AtomicInteger(0);
+		AtomicInteger failureCancelCount = new AtomicInteger(0);
+
+		ConcurrentHashMap<Long, Long> successfulReservations = new ConcurrentHashMap<>();
+		List<Long> reservationUserIds = new CopyOnWriteArrayList<>();
+		List<Future<?>> reservationFutures = new ArrayList<>();
+
+		// 미리 5명 예약 진행
+		log.info("테스트 세팅 - 5명의 사용자가 미리 예약을 진행합니다.");
+		for (long i = startUserId; i < startUserId + 5; i++) {
+			final long userId = i;
+			reservationFutures.add(executorService.submit(() -> {
+				try {
+					ReservationCreateRequest request = ReservationCreateRequest.of(
+							userId, restaurantId, reservationTime, reservationDate, partySize);
+					ReservationCreateResponse response = reservationService.reserve(request, userId);
+					successfulReservations.put(userId, response.getReservationId());
+					reservationUserIds.add(userId);
+					successReservationCount.incrementAndGet();
+				} catch (CustomException e) {
+					failureReservationCount.incrementAndGet();
+					log.warn("[X] 예약 실패 - 유저 ID: {} | {} {} ", userId, e.getErrorCode(),
+							e.getErrorCode().getMessage());
+				} finally {
+					latch.countDown();
+				}
+			}));
+		}
+
+		// 모든 예약이 완료될 때까지 대기
+		for (Future<?> future : reservationFutures) {
+			future.get();
+		}
+
+		Thread.sleep(1000);
+
+		log.info("테스트 시작 - 100명의 유저가 동시에 예약과 취소 요청을 보냅니다.");
+
+		long startTime = System.currentTimeMillis();
+		for (long i = startUserId; i < startUserId + threadCount; i++) {
+			final long userId = i;
+			executorService.execute(() -> {
+				try {
+					boolean isReservation = ThreadLocalRandom.current().nextBoolean(); // 랜덤하게 예약/취소 결정
+
+					if (isReservation) {
+						// 🟢 예약 요청
+						ReservationCreateRequest request = ReservationCreateRequest.of(
+								userId,
+								restaurantId,
+								reservationTime,
+								reservationDate,
+								partySize
+						);
+						ReservationCreateResponse response = reservationService.reserve(request, userId);
+						successfulReservations.put(userId, response.getReservationId()); // 성공한 예약 저장
+						successReservationCount.incrementAndGet();
+						reservationUserIds.add(userId);
+					} else {
+						// 취소 요청 (랜덤한 유저 선택)
+						if (successfulReservations.isEmpty() || reservationUserIds.isEmpty()) {
+							log.warn("[X] 취소 실패 - 예약 없음");
+							failureCancelCount.incrementAndGet();
+							return;
+						}
+						Long randomUserId = reservationUserIds.get(
+								ThreadLocalRandom.current().nextInt(reservationUserIds.size()));
+						reservationUserIds.remove(randomUserId);
+						Long reservationId = successfulReservations.remove(randomUserId);
+						if (reservationId == null) {
+							log.warn("[X] 취소 실패 - 예약 없음 (랜덤 유저 ID: {})", randomUserId);
+							failureCancelCount.incrementAndGet();
+							return;
+						}
+						reservationService.updateReservation(reservationId, "CANCELLED", randomUserId);
+						successCancelCount.incrementAndGet();
+
+					}
+				} catch (CustomException e) {
+					if (e.getErrorCode() == ErrorCode.PARTY_SIZE_EXCEEDED) {
+						failureReservationCount.incrementAndGet();
+					} else {
+						failureCancelCount.incrementAndGet();
+					}
+					log.warn("[X] 예약 실패 - 유저 ID: {} | {} {}", userId,
+							e.getErrorCode(), e.getErrorCode().getMessage());
+				} finally {
+					latch.countDown();
+				}
+			});
+		}
+
+		latch.await();
+		executorService.shutdown();
+		long endTime = System.currentTimeMillis();
+		log.info("실행 시간: {} ms", (endTime - startTime));
+
+		long totalReservations = reservationRepository.countByStatus(ReservationStatus.CONFIRMED);
+		long totalCancelReservations = reservationRepository.countByStatus(ReservationStatus.CANCELLED);
+
+		logReservationResults(successCancelCount, failureCancelCount, totalCancelReservations, "취소");
+		logReservationResults(successReservationCount, failureReservationCount, totalReservations, "예약");
+
+		// 검증
+		assertThat(successReservationCount.get()).isGreaterThan(0);
+		assertThat(successCancelCount.get()).isGreaterThan(0);
+		assertThat(totalReservations).isLessThanOrEqualTo(testSlots.get(0).getAvailablePartySize() / partySize);
+	}
+
+	private void logReservationResults(
+			AtomicInteger succssCount,
+			AtomicInteger failureCount,
+			long totalCount,
+			String type
+	) {
+		log.info("---------------------------------------------");
+		log.info("{} 성공: {}", type, succssCount.get());
+		log.warn("{} 실패: {}", type, failureCount.get());
+
+		log.info("최종 DB {} 건수: {}", type, totalCount);
 	}
 }

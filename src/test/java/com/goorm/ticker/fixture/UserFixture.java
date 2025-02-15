@@ -46,4 +46,14 @@ public enum UserFixture {
 			.password(password)
 			.build();
 	}
+
+	public User createUserWithId(Long id) {
+		return User.builder()
+			.id(id)
+			.name(name)
+			.loginId(loginId)
+			.password(password)
+			.build();
+	}
+
 }

@@ -2,6 +2,10 @@ package com.goorm.ticker.reservation.service;
 
 import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +37,7 @@ public class ReservationService {
 	private final ReservationStatusPublisher reservationStatusPublisher;
 
 	@Transactional
-	public ReservationCreateResponse reserve(ReservationCreateRequest request) {
+	public ReservationCreateResponse reserve(ReservationCreateRequest request, Long userId) {
 
 		// 음식점 조회
 		Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
@@ -51,6 +55,8 @@ public class ReservationService {
 
 		User user = userRepository.findById(request.getUserId())
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
+		//User user = userRepository.findById(userId)
+		//	.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
 		ReservationStatus initialStatus = switch (restaurant.getReservationPolicy()) {
 			case INSTANT_CONFIRMATION -> ReservationStatus.CONFIRMED;
@@ -77,13 +83,19 @@ public class ReservationService {
 		log.info("예약 성공: reservationId={}", reservation.getReservationId());
 
 		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
-			slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
+			// slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
 
 			// 즉시 확정 예약 시 CONFIRM 알림 전송
 			reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), "CONFIRMED");
+			// 원자적으로 가용 인원 감소
+			reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
 		}
 
 		reservationRepository.save(reservation);
+
+		log.info("[O] 예약 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
+				reservation.getUser().getId(), reservation.getReservationId(),
+				reservation.getReservationSlot().getAvailablePartySize());
 
 		return ReservationCreateResponse.builder()
 				.reservationId(reservation.getReservationId())
@@ -97,10 +109,14 @@ public class ReservationService {
 	}
 
 	@Transactional
-	public ReservationCreateResponse updateReservation(Long reservationId, String status) {
+	public ReservationCreateResponse updateReservation(Long reservationId, String status, Long userId) {
 		// 예약 조회
 		Reservation reservation = reservationRepository.findById(reservationId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+		if (!reservation.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.FORBIDDEN_RESERVATION_ACCESS);
+		}
 
 		// 예약 상태 확인
 		ReservationStatus newStatus;
@@ -147,10 +163,15 @@ public class ReservationService {
 
 	private void handleCancellation(Reservation reservation) {
 		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-			ReservationSlot slot = reservation.getReservationSlot();
-			slot.updateAvailablePartySize(slot.getAvailablePartySize() + reservation.getPartySize());
+			// 원자적으로 가용 인원 증가
+			reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
+					reservation.getPartySize());
 		}
 		reservation.cancelReservation();
+		log.info("[O] 취소 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
+				reservation.getUser().getId(), reservation.getReservationId(),
+				reservation.getReservationSlot().getAvailablePartySize());
+
 	}
 
 	private void handleEntry(Reservation reservation) {
@@ -181,5 +202,38 @@ public class ReservationService {
 	public Reservation getReservationById(Long reservationId) {
 		return reservationRepository.findById(reservationId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+	}
+
+	@Transactional(readOnly = true)
+	public List<ReservationCreateResponse> getReservationsByUserAndStatus(Long userId, String status) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
+
+		List<Reservation> reservations;
+		if (status != null) {
+			status = status.toUpperCase();
+			ReservationStatus reservationStatus;
+			try {
+				reservationStatus = ReservationStatus.valueOf(status.toUpperCase());
+			} catch (IllegalArgumentException e) {
+				throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+			}
+			reservations = reservationRepository.findByUserAndStatus(user, reservationStatus);
+		} else {
+			reservations = reservationRepository.findByUser(user);
+		}
+
+		return reservations.stream()
+				.map(reservation -> ReservationCreateResponse.builder()
+						.reservationId(reservation.getReservationId())
+						.restaurantName(reservation.getRestaurant().getRestaurantName())
+						.username(user.getName())
+						.reservationDate(reservation.getReservationDate())
+						.reservationTime(reservation.getReservationSlot().getSlotTime())
+						.partySize(reservation.getPartySize())
+						.status(reservation.getStatus())
+						.build())
+				.collect(Collectors.toList());
 	}
 }
