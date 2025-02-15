@@ -91,7 +91,6 @@ public class ReservationService {
 			reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
 		}
 
-		reservationRepository.save(reservation);
 
 		log.info("[O] 예약 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
 				reservation.getUser().getId(), reservation.getReservationId(),
@@ -162,16 +161,21 @@ public class ReservationService {
 	}
 
 	private void handleCancellation(Reservation reservation) {
+		if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+			throw new CustomException(ErrorCode.RESERVATION_ALREADY_UPDATED);
+		}
+
 		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
 			// 원자적으로 가용 인원 증가
 			reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
 					reservation.getPartySize());
 		}
 		reservation.cancelReservation();
+		reservationRepository.saveAndFlush(reservation); // 상태 변경 즉시 반영
+
 		log.info("[O] 취소 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
 				reservation.getUser().getId(), reservation.getReservationId(),
 				reservation.getReservationSlot().getAvailablePartySize());
-
 	}
 
 	private void handleEntry(Reservation reservation) {
