@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import com.goorm.ticker.user.entity.User;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
@@ -19,9 +19,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     List<Reservation> findByUserAndStatus(User user, ReservationStatus status);
 
-    @Query("SELECT r FROM Reservation r WHERE r.reservationDateTime < :threshold AND r.status <> :status")
-    List<Reservation> findByReservationDateTimeBeforeAndStatusNot(
-            @Param("threshold") LocalDateTime threshold,
-            @Param("status") ReservationStatus status
-    );
+    @Query("SELECT r FROM Reservation r " + "WHERE r.status = 'PENDING' " + "AND r.reservationSlot.slotTime < :threshold")
+    List<Reservation> findPendingReservationsPastSlotTime(@Param("threshold") LocalTime threshold);
 }
