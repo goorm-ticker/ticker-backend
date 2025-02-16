@@ -84,18 +84,16 @@ public class NotificationService {
             }
         }
 
-        log.info("알림 저장 시도: reservationId={}, userId={}, message={}", reservationId, user.getId(), message);
-
         Notification notification = Notification.createNotification(user, message, notificationType);
         notificationRepository.save(notification);
 
-        log.info("알림 저장 완료: reservationId={}, userId={}, status={}, notificationId={}",
-                reservationId, user.getId(), status, notification.getId());
+        reservation.updateLastNotificationStatus(status);
 
-        reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), status);
         fcmService.sentNotification("general", title, message);
 
+        reservationStatusPublisher.publishReservationStatus(reservationId, status);
     }
+
 
     @Scheduled(fixedRate = 60000)
     @Transactional

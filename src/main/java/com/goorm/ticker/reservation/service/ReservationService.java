@@ -149,6 +149,9 @@ public class ReservationService {
 			default -> throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
+		reservation.updateLastNotificationStatus(newStatus.name());
+		reservationRepository.saveAndFlush(reservation);
+
 		return ReservationCreateResponse.builder()
 				.reservationId(reservation.getReservationId())
 				.restaurantName(reservation.getRestaurant().getRestaurantName())
@@ -171,7 +174,6 @@ public class ReservationService {
 					reservation.getPartySize());
 		}
 		reservation.cancelReservation();
-		reservationRepository.saveAndFlush(reservation); // 상태 변경 즉시 반영
 
 		log.info("[O] 취소 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
 				reservation.getUser().getId(), reservation.getReservationId(),
@@ -207,6 +209,19 @@ public class ReservationService {
 		return reservationRepository.findById(reservationId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
+	}
+
+	public void sendNotificationIfNeeded(Reservation reservation, String newStatus) {
+		// 이미 전송된 알림인지 확인 (중복 방지)
+		if (reservation.isNotificationAlreadySent(newStatus)) {
+			log.info("이미 전송된 알림입니다. reservationId={}, status={}", reservation.getReservationId(), newStatus);
+			return;
+		}
+
+		reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), newStatus);
+
+		reservation.updateLastNotificationStatus(newStatus);
+		reservationRepository.save(reservation);
 	}
 
 	@Transactional(readOnly = true)
