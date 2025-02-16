@@ -24,6 +24,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Entity
 @Getter
@@ -61,6 +62,9 @@ public class Reservation extends BaseTimeEntity {
 	@Column(name = "reservation_datetime", nullable = false)
 	private LocalDateTime reservationDateTime;
 
+	@Column(name = "last_notification_status")
+	private String lastNotificationStatus;
+
 	public static Reservation of(Restaurant restaurant, ReservationSlot reservationSlot, LocalDate reservationDate,
 								 User user, Integer partySize, ReservationStatus status) {
 		return Reservation.builder()
@@ -83,8 +87,24 @@ public class Reservation extends BaseTimeEntity {
 		this.status = ReservationStatus.ENTERED;
 	}
 
-	public void cancelReservation() {
-		this.status = ReservationStatus.CANCELLED;
+	public void cancelReservation() {this.status = ReservationStatus.CANCELLED; }
+
+	public boolean isNotificationAlreadySent(String newStatus) {
+		if (this.lastNotificationStatus == null) {
+			return false;
+		}
+		if (this.lastNotificationStatus.equals("CONFIRMED") && newStatus.equals("CANCELLED")) {
+			return false;
+		}
+		if (this.lastNotificationStatus.equals("CANCELLED") && newStatus.equals("CANCELLED")) {
+			return true;
+		}
+		return this.lastNotificationStatus.equals(newStatus);
+	}
+
+	@Transactional
+	public void updateLastNotificationStatus(String newStatus) {
+		this.lastNotificationStatus = newStatus;
 	}
 
 }
