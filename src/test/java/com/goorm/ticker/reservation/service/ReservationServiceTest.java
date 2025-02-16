@@ -355,6 +355,7 @@ class ReservationServiceTest {
 		});
 	}
 
+
 	@DisplayName("예약 확정에서 취소로 변경하여 예약 가능 인원이 증가합니다.")
 	@Test
 	void testUpdateReservationStatusFromConfirmedToCancelled() {
