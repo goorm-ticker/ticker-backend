@@ -6,17 +6,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.goorm.ticker.notification.repository.NotificationRepository;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -214,7 +208,10 @@ public class ReservationConcurrencyTest {
 			future.get();
 		}
 
-		Thread.sleep(1000);
+		Awaitility.await()
+				.atMost(5, TimeUnit.SECONDS)
+				.pollInterval(500, TimeUnit.MILLISECONDS)
+				.until(() -> reservationRepository.countByStatus(ReservationStatus.CONFIRMED) >= 5);
 
 		log.info("테스트 시작 - 100명의 유저가 동시에 예약과 취소 요청을 보냅니다.");
 
