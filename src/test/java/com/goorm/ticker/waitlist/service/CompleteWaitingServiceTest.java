@@ -4,10 +4,10 @@ import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.map.service.MapService;
 import com.goorm.ticker.restaurant.entity.Restaurant;
+import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
-import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,15 +29,17 @@ public class CompleteWaitingServiceTest {
 
     @Mock
     private WaitListRepository waitListRepository;
+
     @Mock
     private MapService mapService;
 
-    @Mock
-    private HttpSession session;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
-        when(session.getAttribute("user")).thenReturn(1L);
+        testUser = User.builder()
+                .id(1L)
+                .build();
     }
 
     @Test
@@ -54,22 +56,10 @@ public class CompleteWaitingServiceTest {
                 .thenReturn(Optional.of(waitList));
 
         // when
-        completeWaitingService.completeWaiting();
+        completeWaitingService.completeWaiting(testUser.getId());
 
         // when
         assert waitList.getStatus() == Status.ENTERED;
-    }
-
-    @Test
-    @DisplayName("입장 완료 실패 - 세션 없음 (SESSION_EXPIRED)")
-    void completeWaiting_Fail_SessionExpired() {
-        // given
-        when(session.getAttribute("user")).thenReturn(null);
-
-        // when & then
-        assertThatThrownBy(() -> completeWaitingService.completeWaiting())
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SESSION_EXPIRED);
     }
 
     @Test
@@ -80,7 +70,7 @@ public class CompleteWaitingServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> completeWaitingService.completeWaiting())
+        assertThatThrownBy(() -> completeWaitingService.completeWaiting(testUser.getId()))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WAITLIST_NOT_FOUND);
     }
