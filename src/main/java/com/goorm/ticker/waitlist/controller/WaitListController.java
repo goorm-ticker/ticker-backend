@@ -62,18 +62,4 @@ public class WaitListController {
         cancelWaitingService.cancelWaiting();
         return ResponseEntity.ok("대기열이 취소되었습니다.");
     }
-
-    /* 대기열 리스트 (사용 안 하면 삭제 예정입니다.)
-    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<List<WaitListResponseDto>> getWaitingListStream() {
-        return Flux.interval(Duration.ofSeconds(3))
-                .map(sequence -> waitingListService.getWaitingList());
-    }*/
-
-    /* 식당 대기열 목록 (사용 안 하면 삭제 예정입니다.)
-    @GetMapping(value = "/{restaurantId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<List<WaitListResponseDto>> getRestaurantWaitingListStream(@PathVariable Long restaurantId) {
-        return Flux.interval(Duration.ofSeconds(3))
-                .map(sequence -> restaurantWaitingService.getWaitingListByRestaurant(restaurantId));
-    }*/
 }
