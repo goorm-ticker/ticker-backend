@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class NotificationRequest {
     private Long userId;
+    private Long reservationId;
     private String message;
     private NotificationType type;
 }

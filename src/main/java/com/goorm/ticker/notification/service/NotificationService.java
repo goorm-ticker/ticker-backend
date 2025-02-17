@@ -6,6 +6,8 @@ import com.goorm.ticker.notification.entity.Notification;
 import com.goorm.ticker.notification.entity.NotificationType;
 import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
 import com.goorm.ticker.notification.repository.NotificationRepository;
+import com.goorm.ticker.reservation.Entity.Reservation;
+import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -27,6 +29,7 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final FCMService fcmService;
     private final ReservationStatusPublisher reservationStatusPublisher;
+    private final ReservationRepository reservationRepository;
 
     @Transactional
     public void createNotification(NotificationRequest request) {
@@ -42,23 +45,55 @@ public class NotificationService {
         );
         notificationRepository.save(notification);
 
-        log.info("알림 타입: {}", request.getType());
-
         if (request.getType() == NotificationType.RESERVATION_CONFIRMATION) {
-            log.info("예약 확정 알림 전송 중...");
-            String title = "예약이 확정되었습니다.";
-            String body = "예약이 성공적으로 확정되었습니다. 입장 시간이 되면 방문해주세요.";
-            fcmService.sentNotification("general", title, body);
-        } else if (request.getType() == NotificationType.WAITLIST_NUMBER_CHANGE) {
-            log.info("대기 순번 변경 알림 전송 중...");
-            String title = "대기 순번 변경";
-            String body = String.format("대기 순번이 %s 번으로 변경되었습니다.", request.getMessage());
-            fcmService.sentNotification("general", title, body);
-            reservationStatusPublisher.publishReservationStatus(title + ": " + body);
+            reservationStatusPublisher.publishReservationStatus(request.getReservationId(), "CONFIRMED");
+            log.info("예약 상태 변경 이벤트 전송: reservationId={}, status=CONFIRMED", request.getReservationId());
+        } else if (request.getType() == NotificationType.RESERVATION_CANCEL) {
+            reservationStatusPublisher.publishReservationStatus(request.getReservationId(), "CANCELLED");
+            log.info("예약 상태 변경 이벤트 전송: reservationId={}, status=CANCELLED", request.getReservationId());
         } else {
             log.warn("알 수 없는 알림 타입: {}", request.getType());
         }
     }
+
+    @Transactional
+    public void sendReservationNotification(Long reservationId, NotificationType notificationType) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다."));
+
+        User user = reservation.getUser();
+
+        String title;
+        String message;
+        String status;
+
+        switch (notificationType) {
+            case RESERVATION_CONFIRMATION -> {
+                title = "예약 확정 알림";
+                message = "예약이 확정되었습니다. 방문 시간에 맞춰 방문해주세요.";
+                status = "CONFIRMED";
+            }
+            case RESERVATION_CANCEL -> {
+                title = "예약 취소 알림";
+                message = "예약이 취소되었습니다.";
+                status = "CANCELLED";
+            }
+            default -> {
+                log.warn("알 수 없는 알림 타입: {}", notificationType);
+                return;
+            }
+        }
+
+        Notification notification = Notification.createNotification(user, message, notificationType);
+        notificationRepository.save(notification);
+
+        reservation.updateLastNotificationStatus(status);
+
+        if (!reservation.isNotificationAlreadySent(status)) {
+            fcmService.sentNotification("general", title, message);
+        }
+    }
+
 
     @Scheduled(fixedRate = 60000)
     @Transactional

@@ -1,6 +1,7 @@
 package com.goorm.ticker.reservation.Entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.goorm.ticker.common.entity.BaseTimeEntity;
 import com.goorm.ticker.restaurant.entity.ReservationSlot;
@@ -23,6 +24,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Entity
 @Getter
@@ -57,16 +59,24 @@ public class Reservation extends BaseTimeEntity {
 	@Column(name = "status", nullable = false)
 	private ReservationStatus status;
 
+	@Column(name = "reservation_datetime", nullable = false)
+	private LocalDateTime reservationDateTime;
+
+	@Column(name = "last_notification_status")
+	private String lastNotificationStatus;
+
 	public static Reservation of(Restaurant restaurant, ReservationSlot reservationSlot, LocalDate reservationDate,
-		User user, Integer partySize, ReservationStatus status) {
+								 User user, Integer partySize, ReservationStatus status) {
 		return Reservation.builder()
-			.restaurant(restaurant)
-			.reservationSlot(reservationSlot)
-			.reservationDate(reservationDate)
-			.user(user)
-			.partySize(partySize)
-			.status(status)
-			.build();
+				.restaurant(restaurant)
+				.reservationSlot(reservationSlot)
+				.reservationDate(reservationDate)
+				.reservationDateTime(LocalDateTime.of(reservationDate, reservationSlot.getSlotTime())) // 예약 날짜 + 시간 설정
+				.user(user)
+				.partySize(partySize)
+				.status(status)
+				.build();
+
 	}
 
 	public void confirmReservation() {
@@ -77,8 +87,24 @@ public class Reservation extends BaseTimeEntity {
 		this.status = ReservationStatus.ENTERED;
 	}
 
-	public void cancelReservation() {
-		this.status = ReservationStatus.CANCELLED;
+	public void cancelReservation() {this.status = ReservationStatus.CANCELLED; }
+
+	public boolean isNotificationAlreadySent(String newStatus) {
+		if (this.lastNotificationStatus == null) {
+			return false;
+		}
+		if (this.lastNotificationStatus.equals("CONFIRMED") && newStatus.equals("CANCELLED")) {
+			return false;
+		}
+		if (this.lastNotificationStatus.equals("CANCELLED") && newStatus.equals("CANCELLED")) {
+			return true;
+		}
+		return this.lastNotificationStatus.equals(newStatus);
+	}
+
+	@Transactional
+	public void updateLastNotificationStatus(String newStatus) {
+		this.lastNotificationStatus = newStatus;
 	}
 
 }
