@@ -38,7 +38,7 @@ public class ReservationController {
 	public ResponseEntity<ReservationCreateResponse> createReservation(
 		@Valid @RequestBody ReservationCreateRequest request,
 		@Parameter(hidden = true) HttpSession httpSession) {
-		Long userId = (Long)httpSession.getAttribute("userId");
+		Long userId = (Long)httpSession.getAttribute("user");
 
 		if (userId == null) {
 			throw new CustomException(ErrorCode.SESSION_EXPIRED);
@@ -56,7 +56,7 @@ public class ReservationController {
 		@Parameter(hidden = true) HttpSession httpSession) {
 		String status = updateRequest.get("status");
 
-		Long userId = (Long)httpSession.getAttribute("userId");
+		Long userId = (Long)httpSession.getAttribute("user");
 		if (userId == null) {
 			throw new CustomException(ErrorCode.SESSION_EXPIRED);
 		}
@@ -71,7 +71,7 @@ public class ReservationController {
 		@RequestParam(required = false) String status,
 		@Parameter(hidden = true) HttpSession httpSession) {
 
-		Long userId = (Long)httpSession.getAttribute("userId");
+		Long userId = (Long)httpSession.getAttribute("user");
 		List<ReservationCreateResponse> reservations = reservationService.getReservationsByUserAndStatus(userId,
 			status);
 		return ResponseEntity.ok(reservations);
