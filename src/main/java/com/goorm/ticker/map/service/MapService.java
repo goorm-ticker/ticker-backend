@@ -7,6 +7,7 @@ import com.goorm.ticker.map.dto.MapUpdateDto;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.restaurant.repository.RestaurantRepository;
 import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
+import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
 
 import com.goorm.ticker.waitlist.service.WaitingPositionService;
@@ -16,10 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -107,7 +105,7 @@ public class MapService {
     }
 
 
-    @Transactional
+
     public void saveRestaurants(List<String> x, List<String> y, List<Long> restaurantId, List<String> name){
         List<Long> ids = restaurantRepository.findExistingIds(restaurantId);
         List<Restaurant> restaurants = new ArrayList<>();
@@ -131,10 +129,16 @@ public class MapService {
                 .y(restaurant.getY())
                 .waiting(waiting)
                 .build();
+        List<WaitList> waitList = waitListRepository.findRestaurantWaitngList(restaurantId);
+        Map<Long,Integer> wait = new HashMap<>();
+        for(int i = 0 ; i < waitList.size() ; i++){
+            Long userId = waitList.get(i).getUser().getId();
+            wait.put(userId,i);
+        }
         for(Long user : viewer.get(restaurantId)){
             try {
-                WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.getUserWaitingPosition(restaurantId,user);
-                mapUpdateDto.setMyWaiting(waitingInfoResponseDto.waitingCount(),waitingInfoResponseDto.estimatedWaitTime());
+                int count = wait.getOrDefault(user,-1);
+                mapUpdateDto.setMyWaiting(count+1,(count+1) * 20);
                 emitters.get(user).send(SseEmitter.event().name("update").id(user.toString()).data(objectMapper.writeValueAsString(mapUpdateDto)));
             }
             catch (Exception e){
