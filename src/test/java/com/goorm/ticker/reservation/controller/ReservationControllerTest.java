@@ -77,7 +77,7 @@ public class ReservationControllerTest {
 		// 사용자 데이터 설정 및 저장
 		user = UserFixture.USER_FIXTURE_1.createUserWithId(1L);
 		when(userRepository.findById(user.getId())).thenReturn(java.util.Optional.of(user));
-		session.setAttribute("userId", user.getId());
+		session.setAttribute("user", user.getId());
 
 		// 식당 및 예약 슬롯 데이터 설정
 		restaurant = RestaurantFixture.RESTAURANT_FIXTURE_1.createRestaurant();
@@ -179,7 +179,7 @@ public class ReservationControllerTest {
 
 		// 세션 내 유저 ID와 예약의 유저 ID가 다름
 		Long otherUserId = 999L;
-		session.setAttribute("userId", otherUserId);
+		session.setAttribute("user", otherUserId);
 
 		when(reservationService.updateReservation(eq(reservationId), eq(status), eq(otherUserId)))
 			.thenThrow(new CustomException(ErrorCode.FORBIDDEN_RESERVATION_ACCESS));
@@ -199,7 +199,7 @@ public class ReservationControllerTest {
 	@Test
 	void testCreateReservation_Fail_NoSession() throws Exception {
 		// Given
-		session.setAttribute("userId", null);
+		session.setAttribute("user", null);
 		ReservationCreateRequest request = ReservationCreateRequest.of(
 			user.getId(),
 			restaurant.getRestaurantId(),
