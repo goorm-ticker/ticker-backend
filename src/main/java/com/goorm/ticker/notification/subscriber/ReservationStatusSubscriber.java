@@ -48,7 +48,7 @@ public class ReservationStatusSubscriber implements MessageListener {
                         return new EntityNotFoundException("예약을 찾을 수 없습니다.");
                     });
 
-            log.info("🔎 기존 상태: {}, 새로운 상태: {}", reservation.getLastNotificationStatus(), status);
+            log.info("기존 상태: {}, 새로운 상태: {}", reservation.getLastNotificationStatus(), status);
 
             switch (status) {
                 case "CANCELLED" -> {
@@ -63,7 +63,7 @@ public class ReservationStatusSubscriber implements MessageListener {
             }
 
             reservation.updateLastNotificationStatus(status);
-            reservationRepository.saveAndFlush(reservation);
+            reservationRepository.save(reservation);
 
             log.info("상태 업데이트 완료: reservationId={}, newStatus={}", reservationId, status);
 

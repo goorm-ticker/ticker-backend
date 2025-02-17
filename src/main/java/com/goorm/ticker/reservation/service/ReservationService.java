@@ -1,6 +1,10 @@
 package com.goorm.ticker.reservation.service;
 
+import com.goorm.ticker.notification.entity.Notification;
+import com.goorm.ticker.notification.entity.NotificationType;
 import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
+import com.goorm.ticker.notification.repository.NotificationRepository;
+import com.goorm.ticker.notification.service.FCMService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -35,6 +39,10 @@ public class ReservationService {
 	private final ReservationSlotRepository reservationSlotRepository;
 	private final UserRepository userRepository;
 	private final ReservationStatusPublisher reservationStatusPublisher;
+
+	private final FCMService fcmService;
+	private final NotificationRepository notificationRepository;
+
 
 	@Transactional
 	public ReservationCreateResponse reserve(ReservationCreateRequest request, Long userId) {
@@ -109,6 +117,8 @@ public class ReservationService {
 
 	@Transactional
 	public ReservationCreateResponse updateReservation(Long reservationId, String status, Long userId) {
+		log.info("예약 상태 업데이트 요청: reservationId={}, status={}", reservationId, status);
+
 		// 예약 조회
 		Reservation reservation = reservationRepository.findById(reservationId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
@@ -134,17 +144,16 @@ public class ReservationService {
 		switch (newStatus) {
 			case CANCELLED -> {
 				handleCancellation(reservation);
-				if (!isStatusAlreadyUpdated(reservation, "CANCELLED")) {
-					reservationStatusPublisher.publishReservationStatus(reservationId, "CANCELLED");
-				}
+				log.info("예약 취소 처리 완료: reservationId={}", reservationId);
+				reservationStatusPublisher.publishReservationStatus(reservationId, "CANCELLED");
+				log.info("예약 취소 상태 변경 이벤트 전송 완료: reservationId={}", reservationId);
 			}
 			case ENTERED -> handleEntry(reservation);
 			case CONFIRMED -> {
 				handleConfirmation(reservation);
-				// PENDING -> CONFIRMED 변경 시 알림 전송
-				if (!isStatusAlreadyUpdated(reservation, "CONFIRMED")) {
-					reservationStatusPublisher.publishReservationStatus(reservationId, "CONFIRMED");
-				}
+				log.info("예약 확정 처리 완료: reservationId={}", reservationId);
+				reservationStatusPublisher.publishReservationStatus(reservationId, "CONFIRMED");
+				log.info("예약 확정 상태 변경 이벤트 전송 완료: reservationId={}", reservationId);
 			}
 			default -> throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
 		}
@@ -211,18 +220,38 @@ public class ReservationService {
 
 	}
 
+	@Transactional
 	public void sendNotificationIfNeeded(Reservation reservation, String newStatus) {
-		// 이미 전송된 알림인지 확인 (중복 방지)
+		log.info("sendNotificationIfNeeded 실행: reservationId={}, newStatus={}", reservation.getReservationId(), newStatus);
+
 		if (reservation.isNotificationAlreadySent(newStatus)) {
-			log.info("이미 전송된 알림입니다. reservationId={}, status={}", reservation.getReservationId(), newStatus);
+			log.info("중복 알림 방지: reservationId={}, status={}", reservation.getReservationId(), newStatus);
 			return;
 		}
 
-		reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), newStatus);
-
 		reservation.updateLastNotificationStatus(newStatus);
 		reservationRepository.save(reservation);
+
+		String notificationMessage = switch (newStatus) {
+			case "CONFIRMED" -> "예약이 확정되었습니다.";
+			case "CANCELLED" -> "예약이 취소되었습니다.";
+			default -> "예약 상태가 변경되었습니다.";
+		};
+
+		log.info("알림 전송: reservationId={}, message={}", reservation.getReservationId(), notificationMessage);
+		fcmService.sentNotification("general", "예약 알림", notificationMessage);
+
+		Notification notification = Notification.createNotification(
+				reservation.getUser(),
+				notificationMessage,
+				newStatus.equals("CONFIRMED") ? NotificationType.RESERVATION_CONFIRMATION : NotificationType.RESERVATION_CANCEL
+		);
+		notificationRepository.save(notification);
+
+		log.info("예약 상태 변경 알림 저장 완료: reservationId={}, newStatus={}", reservation.getReservationId(), newStatus);
 	}
+
+
 
 	@Transactional(readOnly = true)
 	public List<ReservationCreateResponse> getReservationsByUserAndStatus(Long userId, String status) {

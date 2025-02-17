@@ -45,12 +45,12 @@ public class NotificationService {
         );
         notificationRepository.save(notification);
 
-        log.info("알림 타입: {}", request.getType());
-
         if (request.getType() == NotificationType.RESERVATION_CONFIRMATION) {
-            sendReservationNotification (request.getUserId(), NotificationType.RESERVATION_CONFIRMATION);
+            reservationStatusPublisher.publishReservationStatus(request.getReservationId(), "CONFIRMED");
+            log.info("예약 상태 변경 이벤트 전송: reservationId={}, status=CONFIRMED", request.getReservationId());
         } else if (request.getType() == NotificationType.RESERVATION_CANCEL) {
-            sendReservationNotification (request.getUserId(), NotificationType.RESERVATION_CANCEL);
+            reservationStatusPublisher.publishReservationStatus(request.getReservationId(), "CANCELLED");
+            log.info("예약 상태 변경 이벤트 전송: reservationId={}, status=CANCELLED", request.getReservationId());
         } else {
             log.warn("알 수 없는 알림 타입: {}", request.getType());
         }
@@ -89,9 +89,9 @@ public class NotificationService {
 
         reservation.updateLastNotificationStatus(status);
 
-        fcmService.sentNotification("general", title, message);
-
-        reservationStatusPublisher.publishReservationStatus(reservationId, status);
+        if (!reservation.isNotificationAlreadySent(status)) {
+            fcmService.sentNotification("general", title, message);
+        }
     }
 
 
