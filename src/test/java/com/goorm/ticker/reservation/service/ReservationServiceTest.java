@@ -429,7 +429,11 @@ class ReservationServiceTest {
 
 
 		verify(reservationRepository, atMost(2)).findById(reservationInstant.getReservationId());
-		verify(reservationStatusPublisher, atMost(1)).publishReservationStatus(anyLong(), anyString());
+		verify(reservationStatusPublisher, times(1)).publishReservationStatus(anyLong(), eq("CANCELLED"));
+
+		verify(reservationSlotRepository, atMost(1)).increaseAvailablePartySize(
+				anyLong(), eq(reservationInstant.getPartySize()));
+
 		// 예약 취소 후 가용 인원 증가 확인
 		assertThat(updatedSlot.getAvailablePartySize())
 				.isEqualTo(initialAvailablePartySize); // 원래 상태로 복구됨

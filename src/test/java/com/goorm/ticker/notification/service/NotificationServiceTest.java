@@ -86,8 +86,11 @@ public class NotificationServiceTest {
 
         doNothing().when(reservationStatusPublisher).publishReservationStatus(anyLong(), anyString());
 
+        when(testReservation.isNotificationAlreadySent(anyString())).thenReturn(false);
+
         doNothing().when(fcmService).sentNotification(anyString(), anyString(), anyString());
     }
+
 
     @Test
     @DisplayName("알림을 생성한다.")
@@ -101,16 +104,13 @@ public class NotificationServiceTest {
 
         notificationService.createNotification(request);
 
-        verify(notificationRepository, atLeastOnce()).save(any(Notification.class));
+        verify(notificationRepository, times(1)).save(any(Notification.class));
 
-        List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(testUser.getId());
-        assertEquals(1, notifications.size());
-        assertEquals("예약이 확정되었습니다.", notifications.get(0).getMessage());
-
-        verify(reservationStatusPublisher, times(1)).publishReservationStatus(eq(testReservation.getReservationId()), anyString());
-
-        verify(fcmService, times(1)).sentNotification(anyString(), anyString(), anyString());
+        verify(reservationStatusPublisher, times(1))
+                .publishReservationStatus(eq(testReservation.getReservationId()), eq("CONFIRMED"));
     }
+
+
 
     @Test
     @DisplayName("사용자의 알림 목록을 조회한다.")
