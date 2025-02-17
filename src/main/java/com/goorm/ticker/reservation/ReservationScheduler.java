@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -42,13 +41,12 @@ public class ReservationScheduler {
                     continue;
                 }
 
-                reservation.cancelReservation();
-                reservationRepository.saveAndFlush(reservation);
-
-                //reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), "CANCELLED");
-                reservationService.sendNotificationIfNeeded(reservation, "CANCELLED");
-
-                log.info("예약 자동 취소 완료: reservationId={}", reservation.getReservationId());
+                if (!reservation.isNotificationAlreadySent("CANCELLED")) {
+                    reservation.cancelReservation();
+                    reservation.updateLastNotificationStatus("CANCELLED");
+                    reservationRepository.save(reservation);
+                    reservationService.sendNotificationIfNeeded(reservation, "CANCELLED");
+                }
             }
         }
     }
