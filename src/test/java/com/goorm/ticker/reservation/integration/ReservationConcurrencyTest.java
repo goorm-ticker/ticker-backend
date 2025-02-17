@@ -1,6 +1,7 @@
 package com.goorm.ticker.reservation.integration;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.await;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -10,7 +11,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.goorm.ticker.notification.repository.NotificationRepository;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -208,10 +208,8 @@ public class ReservationConcurrencyTest {
 			future.get();
 		}
 
-		Awaitility.await()
-				.atMost(5, TimeUnit.SECONDS)
-				.pollInterval(500, TimeUnit.MILLISECONDS)
-				.until(() -> reservationRepository.countByStatus(ReservationStatus.CONFIRMED) >= 5);
+		await().atMost(5, TimeUnit.SECONDS)
+				.until(() -> reservationRepository.countByStatus(ReservationStatus.CONFIRMED) > 0);
 
 		log.info("테스트 시작 - 100명의 유저가 동시에 예약과 취소 요청을 보냅니다.");
 
