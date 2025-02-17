@@ -133,12 +133,12 @@ public class MapService {
         Map<Long,Integer> wait = new HashMap<>();
         for(int i = 0 ; i < waitList.size() ; i++){
             Long userId = waitList.get(i).getUser().getId();
-            wait.put(userId,i);
+            wait.put(userId,i+1);
         }
         for(Long user : viewer.get(restaurantId)){
             try {
-                int count = wait.getOrDefault(user,-1);
-                mapUpdateDto.setMyWaiting(count+1,(count+1) * 20);
+                int count = wait.getOrDefault(user,0);
+                mapUpdateDto.setMyWaiting(count,count * 20);
                 emitters.get(user).send(SseEmitter.event().name("update").id(user.toString()).data(objectMapper.writeValueAsString(mapUpdateDto)));
             }
             catch (Exception e){
