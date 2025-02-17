@@ -6,7 +6,6 @@ import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +17,8 @@ public class WaitingPositionService {
     private static final int WAIT_TIME_PER_PERSON = 20;
 
     private final WaitListRepository waitListRepository;
-    private final HttpSession httpSession;
 
     public WaitingInfoResponseDto getUserWaitingPosition(Long restaurantId, Long userId) {
-        // 세션에서 사용자 ID 가져오기
-        //Long userId = getSessionUserId();
-
         WaitList userWaitList;
         int usersAhead;
         int estimatedWaitTime;
@@ -48,14 +43,6 @@ public class WaitingPositionService {
     public long getTotalWaitingCount(Long restaurantId) {
         // 식당에 총 대기중인 사용자 수 반환
         return waitListRepository.countTotalWaitingByRestaurantId(restaurantId);
-    }
-
-    private Long getSessionUserId() {
-        Long userId = (Long) httpSession.getAttribute("user");
-        if (userId == null)
-            throw new CustomException(ErrorCode.SESSION_EXPIRED);
-
-        return userId;
     }
 
     private WaitList findUserWaitingList(Long restaurantId, Long userId) {

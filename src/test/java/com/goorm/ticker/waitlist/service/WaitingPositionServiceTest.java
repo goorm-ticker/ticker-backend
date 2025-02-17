@@ -1,7 +1,5 @@
 package com.goorm.ticker.waitlist.service;
 
-import com.goorm.ticker.common.exception.CustomException;
-import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
 import com.goorm.ticker.waitlist.entity.Status;
@@ -20,7 +18,6 @@ import java.util.Optional;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -66,31 +63,6 @@ public class WaitingPositionServiceTest {
         assertThat(waitingIfo.waitingCount()).isEqualTo(1);
         assertThat(waitingIfo.estimatedWaitTime()).isEqualTo(20);
     }
-
-   /* @Test
-    @DisplayName("대기 순번 조회 실패 - 세션 없음 (SESSION_EXPIRED)")
-    void getUserWaitingPosition_Fail_NoSession() {
-        // given
-        when(session.getAttribute("user")).thenReturn(null);
-
-        // when & then
-        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L,1L))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SESSION_EXPIRED);
-    }*/
-
-    /*@Test
-    @DisplayName("대기 순번 조회 실패 - 대기열에 없는 사용자 (WAITINGLIST_NOT_FOUND)")
-    void getUserWaitingPosition_Fail_NoWaitList() {
-        // given
-        when(waitListRepository.findByRestaurant_RestaurantIdAndUser_IdAndStatus(1L, 1L, Status.WAITING))
-                .thenReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> waitingPositionService.getUserWaitingPosition(1L,1L))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WAITLIST_NOT_FOUND);
-    }*/
 
     @Test
     @DisplayName("총 대기 인원 조회 성공")
