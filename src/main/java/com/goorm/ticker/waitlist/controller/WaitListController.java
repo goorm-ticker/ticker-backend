@@ -19,16 +19,13 @@ import org.springframework.web.bind.annotation.*;
 public class WaitListController {
 
     private final SessionService sessionService;
-    private final RegisterWaitingService registerUserService;
-    private final CompleteWaitingService completeWaitingService;
-    private final CancelWaitingService cancelWaitingService;
-    private final WaitingPositionService waitingPositionService;
+    private final WaitListService waitListService;
 
     @Operation(summary = "대기 등록", description = "사용자를 대기열에 등록합니다.")
     @PostMapping
     public ResponseEntity<WaitListResponseDto> registerWaiting(@RequestBody WaitListRequestDto request) {
         Long userId = sessionService.getSessionUserId();
-        WaitListResponseDto response = registerUserService.registerWaiting(request, userId);
+        WaitListResponseDto response = waitListService.registerWaiting(request, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -39,7 +36,7 @@ public class WaitListController {
             @PathVariable("restaurantId") Long restaurantId,
             @Parameter(description = "조회할 사용자 ID", required = true)
             @PathVariable("userId") Long userId) {
-        WaitingInfoResponseDto waitingInfo = waitingPositionService.getUserWaitingPosition(restaurantId, userId);
+        WaitingInfoResponseDto waitingInfo = waitListService.getUserWaitingPosition(restaurantId, userId);
         return ResponseEntity.ok(waitingInfo);
     }
 
@@ -48,7 +45,7 @@ public class WaitListController {
     public ResponseEntity<Long> getTotalWaiting(
             @Parameter(description = "조회할 식당 ID", required = true)
             @PathVariable("restaurantId") Long restaurantId) {
-        long totalWaiting = waitingPositionService.getTotalWaitingCount(restaurantId);
+        long totalWaiting = waitListService.getTotalWaitingCount(restaurantId);
         return ResponseEntity.ok(totalWaiting);
     }
 
@@ -56,7 +53,7 @@ public class WaitListController {
     @PatchMapping("/complete")
     public ResponseEntity<?> completeWaiting() {
         Long userId = sessionService.getSessionUserId();
-        completeWaitingService.completeWaiting(userId);
+        waitListService.completeWaiting(userId);
         return ResponseEntity.ok("식당 입장 완료되었습니다.");
     }
 
@@ -64,7 +61,7 @@ public class WaitListController {
     @PatchMapping("/cancel")
     public ResponseEntity<?> cancelWaiting() {
         Long userId = sessionService.getSessionUserId();
-        cancelWaitingService.cancelWaiting(userId);
+        waitListService.cancelWaiting(userId);
         return ResponseEntity.ok("대기열이 취소되었습니다.");
     }
 }
