@@ -1,5 +1,6 @@
 package com.goorm.ticker.waitlist.controller;
 
+import com.goorm.ticker.common.service.SessionService;
 import com.goorm.ticker.waitlist.dto.WaitListRequestDto;
 import com.goorm.ticker.waitlist.dto.WaitListResponseDto;
 import com.goorm.ticker.waitlist.dto.WaitingInfoResponseDto;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/waitlist")
 public class WaitListController {
 
+    private final SessionService sessionService;
     private final RegisterWaitingService registerUserService;
     private final CompleteWaitingService completeWaitingService;
     private final CancelWaitingService cancelWaitingService;
@@ -25,7 +27,8 @@ public class WaitListController {
     @Operation(summary = "대기 등록", description = "사용자를 대기열에 등록합니다.")
     @PostMapping
     public ResponseEntity<WaitListResponseDto> registerWaiting(@RequestBody WaitListRequestDto request) {
-        WaitListResponseDto response = registerUserService.registerWaiting(request);
+        Long userId = sessionService.getSessionUserId();
+        WaitListResponseDto response = registerUserService.registerWaiting(request, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -36,7 +39,7 @@ public class WaitListController {
             @PathVariable("restaurantId") Long restaurantId,
             @Parameter(description = "조회할 사용자 ID", required = true)
             @PathVariable("userId") Long userId) {
-        WaitingInfoResponseDto waitingInfo = waitingPositionService.getUserWaitingPosition(restaurantId,userId);
+        WaitingInfoResponseDto waitingInfo = waitingPositionService.getUserWaitingPosition(restaurantId, userId);
         return ResponseEntity.ok(waitingInfo);
     }
 
@@ -52,14 +55,16 @@ public class WaitListController {
     @Operation(summary = "입장 완료", description = "사용자의 대기 상태를 '입장 완료'로 변경합니다.")
     @PatchMapping("/complete")
     public ResponseEntity<?> completeWaiting() {
-        completeWaitingService.completeWaiting();
+        Long userId = sessionService.getSessionUserId();
+        completeWaitingService.completeWaiting(userId);
         return ResponseEntity.ok("식당 입장 완료되었습니다.");
     }
 
     @Operation(summary = "대기 취소", description = "사용자의 대기열 상태를 '취소'로 변경합니다.")
     @PatchMapping("/cancel")
     public ResponseEntity<?> cancelWaiting() {
-        cancelWaitingService.cancelWaiting();
+        Long userId = sessionService.getSessionUserId();
+        cancelWaitingService.cancelWaiting(userId);
         return ResponseEntity.ok("대기열이 취소되었습니다.");
     }
 }
