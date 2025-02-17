@@ -44,4 +44,7 @@ public interface WaitListRepository extends JpaRepository<WaitList, Long> {
     List<MapUpdateDto> findRestaurantsWithWaiting(@Param("restaurantIds") List<Long> restaurantIds);
 
 
+    @Query("SELECT w FROM WaitList w WHERE w.restaurant.restaurantId = :restaurantId AND w.status = 'WAITING' ORDER BY w.waitingNumber ASC")
+    List<WaitList> findRestaurantWaitngList(@Param("restaurantId") Long restaurantId);
+
 }
