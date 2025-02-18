@@ -1,6 +1,6 @@
 package com.goorm.ticker.notification.service;
 
-import com.goorm.ticker.notification.Scheduler.WaitingListScheduler;
+import com.goorm.ticker.notification.scheduler.WaitingListScheduler;
 import com.goorm.ticker.notification.repository.NotificationRepository;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
