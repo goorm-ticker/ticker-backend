@@ -10,14 +10,16 @@ import com.goorm.ticker.reservation.Entity.Reservation;
 import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
+import com.goorm.ticker.waitlist.entity.WaitList;
+import com.goorm.ticker.waitlist.repository.WaitListRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,6 +32,7 @@ public class NotificationService {
     private final FCMService fcmService;
     private final ReservationStatusPublisher reservationStatusPublisher;
     private final ReservationRepository reservationRepository;
+    private final WaitListRepository waitListRepository;
 
     @Transactional
     public void createNotification(NotificationRequest request) {
@@ -95,32 +98,31 @@ public class NotificationService {
     }
 
 
-    @Scheduled(fixedRate = 60000)
     @Transactional
-    public void sendEntryPossibleNotifications() {
-        log.info("입장 가능 알림 전송");
-        List<Notification> notifications = notificationRepository.findByTypeAndMessage(NotificationType.WAITLIST_NUMBER_CHANGE, "1");
+    public void sendEntryPossibleNotification(Long restaurantId) {
+        log.info("식당 ID {} 대기 순번 1번 사용자에게 입장 가능 알림 전송 시도", restaurantId);
 
-        for (Notification notification : notifications) {
-            User user = notification.getUser();
+        Optional<WaitList> firstWaitingUser = waitListRepository.findRestaurantWaitingList(restaurantId)
+                .stream()
+                .findFirst();
 
-            boolean alreadyNotified = notificationRepository.existsByUserAndType(user, NotificationType.ENTRY_POSSIBLE);
-            if (alreadyNotified) {
-                log.info("입장 가능 알림 수신");
-                continue;
-            }
-
-            Notification entryNotification = Notification.createNotification(
-                    user,
-                    "입장이 가능합니다. 매장으로 와주세요!",
-                    NotificationType.ENTRY_POSSIBLE
-            );
-            notificationRepository.save(entryNotification);
-
-            String title = "입장 가능 알림";
-            String body = "입장 시간이 되었습니다. 매장으로 와주세요!";
-            fcmService.sentNotification("general", title, body);
+        if (firstWaitingUser.isEmpty()) {
+            log.info("식당 ID {}에 대기자 없음", restaurantId);
+            return;
         }
+
+        WaitList waitList = firstWaitingUser.get();
+        User user = waitList.getUser();
+
+        String title = "입장 가능 알림";
+        String message = "입장 순번이 되었습니다. 매장으로 와주세요";
+
+        Notification notification = Notification.createNotification(user, message, NotificationType.ENTRY_POSSIBLE);
+        notificationRepository.save(notification);
+
+        fcmService.sentNotification("general", title, message);
+
+        log.info("입장 가능 알림 전송 완료: userId={}, restaurantId={}", user.getId(), restaurantId);
     }
 
     @Transactional(readOnly = true)
