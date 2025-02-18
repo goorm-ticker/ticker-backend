@@ -10,6 +10,7 @@ import com.goorm.ticker.reservation.Entity.Reservation;
 import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.user.repository.UserRepository;
+import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -104,6 +105,7 @@ public class NotificationService {
 
         Optional<WaitList> firstWaitingUser = waitListRepository.findRestaurantWaitingList(restaurantId)
                 .stream()
+                .filter(waitList -> waitList.getStatus() == Status.WAITING)
                 .findFirst();
 
         if (firstWaitingUser.isEmpty()) {
@@ -112,6 +114,12 @@ public class NotificationService {
         }
 
         WaitList waitList = firstWaitingUser.get();
+
+        if (waitList.getStatus() == Status.ENTERED) {
+            log.warn("이미 입장 처리된 사용자 (userId={}, restaurantId={})", waitList.getUser().getId(), restaurantId);
+            return;
+        }
+
         User user = waitList.getUser();
 
         String title = "입장 가능 알림";
@@ -124,6 +132,7 @@ public class NotificationService {
 
         log.info("입장 가능 알림 전송 완료: userId={}, restaurantId={}", user.getId(), restaurantId);
     }
+
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications(Long userId) {
