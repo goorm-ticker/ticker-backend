@@ -9,6 +9,10 @@ import com.goorm.ticker.waitlist.repository.WaitListRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class WaitingPositionService {
@@ -54,5 +58,20 @@ public class WaitingPositionService {
     private int countUserAhead(WaitList userWaitList) {
         return (int) waitListRepository.countByRestaurant_RestaurantIdAndWaitingNumberLessThanAndStatus(
                 userWaitList.getRestaurant().getRestaurantId(), userWaitList.getWaitingNumber(), Status.WAITING);
+    }
+
+    public WaitingInfoResponseDto updateMyWaitingInfo(Long restaurantId, Long userId) {
+        List<WaitList> waitList = waitListRepository.findRestaurantWaitngList(restaurantId);
+
+        Map<Long, Integer> waitingOrder = new HashMap<>();
+        for(int i = 0 ; i < waitList.size() ; i++){
+            waitingOrder.put(waitList.get(i).getUser().getId(), i + 1);
+        }
+
+        if(!waitingOrder.containsKey(userId)) {
+            return new WaitingInfoResponseDto(-1, -1);
+        }
+        int order = waitingOrder.get(userId);
+        return new WaitingInfoResponseDto(order, order * WAIT_TIME_PER_PERSON);
     }
 }
