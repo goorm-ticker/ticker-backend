@@ -1,9 +1,10 @@
-package com.goorm.ticker.notification.Scheduler;
+package com.goorm.ticker.notification.scheduler;
 
 import com.goorm.ticker.notification.service.NotificationService;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ public class WaitingListScheduler {
     private final WaitListRepository waitListRepository;
     private final NotificationService notificationService;
 
+    @Async
     @Scheduled(fixedRate = 300000)
     public void checkAndSendEntryPossibleNotification() {
 

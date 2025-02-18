@@ -1,4 +1,4 @@
-package com.goorm.ticker.notification.Scheduler;
+package com.goorm.ticker.notification.scheduler;
 
 import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
 import com.goorm.ticker.reservation.Entity.Reservation;
@@ -7,6 +7,7 @@ import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.reservation.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class ReservationScheduler {
     private final ReservationStatusPublisher reservationStatusPublisher;
     private final ReservationService reservationService;
 
+    @Async
     @Scheduled(fixedRate = 300000)
     public void cancelReservations() {
         LocalTime now = LocalTime.now();
