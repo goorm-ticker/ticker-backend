@@ -1,4 +1,4 @@
-package com.goorm.ticker.notification.scheduler;
+/*package com.goorm.ticker.notification.scheduler;
 
 import com.goorm.ticker.notification.service.NotificationService;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
@@ -33,3 +33,4 @@ public class WaitingListScheduler {
         log.info("입장 가능 알림 전송 완료");
     }
 }
+*/
