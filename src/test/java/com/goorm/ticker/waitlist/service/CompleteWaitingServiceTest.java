@@ -3,6 +3,7 @@ package com.goorm.ticker.waitlist.service;
 import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.map.service.MapService;
+import com.goorm.ticker.notification.service.NotificationService;
 import com.goorm.ticker.restaurant.entity.Restaurant;
 import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.waitlist.entity.Status;
@@ -19,7 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CompleteWaitingServiceTest {
@@ -33,6 +35,9 @@ public class CompleteWaitingServiceTest {
     @Mock
     private MapService mapService;
 
+    @Mock
+    private NotificationService notificationService;
+
     private User testUser;
 
     @BeforeEach
@@ -40,6 +45,8 @@ public class CompleteWaitingServiceTest {
         testUser = User.builder()
                 .id(1L)
                 .build();
+
+        lenient().doNothing().when(notificationService).sendEntryPossibleNotification(anyLong());
     }
 
     @Test
@@ -47,6 +54,7 @@ public class CompleteWaitingServiceTest {
     void completeWaiting_Success() {
         // given
         WaitList waitList = WaitList.builder()
+                .user(testUser)
                 .waitingNumber(1)
                 .status(Status.WAITING)
                 .restaurant(Restaurant.builder().restaurantId(1L).build())
@@ -58,8 +66,11 @@ public class CompleteWaitingServiceTest {
         // when
         completeWaitingService.completeWaiting(testUser.getId());
 
-        // when
-        assert waitList.getStatus() == Status.ENTERED;
+        // Then
+        assertEquals(Status.ENTERED, waitList.getStatus());
+
+        verify(notificationService, times(1)).sendEntryPossibleNotification(waitList.getRestaurant().getRestaurantId());
+
     }
 
     @Test
