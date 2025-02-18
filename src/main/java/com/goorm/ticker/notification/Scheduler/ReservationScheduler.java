@@ -1,4 +1,4 @@
-package com.goorm.ticker.reservation;
+package com.goorm.ticker.notification.Scheduler;
 
 import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
 import com.goorm.ticker.reservation.Entity.Reservation;
