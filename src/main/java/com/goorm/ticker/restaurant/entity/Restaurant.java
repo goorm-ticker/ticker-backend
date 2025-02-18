@@ -39,8 +39,13 @@ public class Restaurant {
 	@Column(name = "reservation_policy", nullable = false)
 	private ReservationPolicy reservationPolicy;
 
-	public static Restaurant of(Long restaurantId, String restaurantName, String x, String y, Integer maxWaiting,
-		ReservationPolicy reservationPolicy) {
+	private String placeUrl;
+
+	public static Restaurant of(Long restaurantId, String restaurantName,
+								String x, String y,
+								Integer maxWaiting,
+								ReservationPolicy reservationPolicy,
+								String placeUrl) {
 		return Restaurant.builder()
 			.restaurantId(restaurantId)
 			.restaurantName(restaurantName)
@@ -48,6 +53,7 @@ public class Restaurant {
 			.y(y)
 			.maxWaiting(maxWaiting)
 			.reservationPolicy(reservationPolicy)
+			.placeUrl(placeUrl)
 			.build();
 	}
 }

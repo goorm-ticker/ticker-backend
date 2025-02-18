@@ -34,7 +34,8 @@ public interface WaitListRepository extends JpaRepository<WaitList, Long> {
         r.restaurantName,
         r.x,
         r.y,
-        COUNT(w)
+        COUNT(w),
+        r.placeUrl
     )
     FROM Restaurant r 
     LEFT JOIN WaitList w ON r = w.restaurant AND w.status = 'WAITING' 
