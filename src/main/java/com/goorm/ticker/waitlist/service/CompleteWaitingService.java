@@ -16,14 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompleteWaitingService {
 
     private final WaitListRepository waitListRepository;
-    private final HttpSession httpSession;
     private final MapService mapService;
 
     @Transactional
-    public void completeWaiting() {
-        // 세션에서 사용자 ID 가져오기
-        Long userId = getSessionUserId();
-
+    public void completeWaiting(Long userId) {
         // 사용자 대기열의 정보 조회
         WaitList waitList = findUserWaitingList(userId);
 
@@ -31,14 +27,6 @@ public class CompleteWaitingService {
 
         //지도 대기열 업데이트
         mapService.updateMap(waitList.getRestaurant().getRestaurantId());
-    }
-
-    private Long getSessionUserId() {
-        Long userId = (Long) httpSession.getAttribute("user");
-        if (userId == null)
-            throw new CustomException(ErrorCode.SESSION_EXPIRED);
-
-        return userId;
     }
 
     private WaitList findUserWaitingList(Long userId) {

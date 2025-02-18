@@ -4,10 +4,10 @@ import com.goorm.ticker.common.exception.CustomException;
 import com.goorm.ticker.common.exception.ErrorCode;
 import com.goorm.ticker.map.service.MapService;
 import com.goorm.ticker.restaurant.entity.Restaurant;
+import com.goorm.ticker.user.entity.User;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import com.goorm.ticker.waitlist.repository.WaitListRepository;
-import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,16 +29,17 @@ public class CancelWaitingServiceTest {
 
     @Mock
     private WaitListRepository waitListRepository;
+
     @Mock
     private MapService mapService;
 
-    @Mock
-    private HttpSession session;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
-        when(session.getAttribute("user")).thenReturn(1L);
-
+        testUser = User.builder()
+                .id(1L)
+                .build();
     }
 
     @Test
@@ -57,22 +57,10 @@ public class CancelWaitingServiceTest {
 
 
         // when
-        cancelWaitingService.cancelWaiting();
+        cancelWaitingService.cancelWaiting(testUser.getId());
 
         // when
         assert waitList.getStatus() == Status.CANCELLED;
-    }
-
-    @Test
-    @DisplayName("대기열 취소 실패 - 세션 없음 (SESSION_EXPIRED)")
-    void cancelWaiting_Fail_SessionExpired() {
-        // given
-        when(session.getAttribute("user")).thenReturn(null);
-
-        // when & then
-        assertThatThrownBy(() -> cancelWaitingService.cancelWaiting())
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SESSION_EXPIRED);
     }
 
     @Test
@@ -83,7 +71,7 @@ public class CancelWaitingServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> cancelWaitingService.cancelWaiting())
+        assertThatThrownBy(() -> cancelWaitingService.cancelWaiting(testUser.getId()))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WAITLIST_NOT_FOUND);
     }
