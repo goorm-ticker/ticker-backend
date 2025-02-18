@@ -4,6 +4,7 @@ import com.goorm.ticker.map.dto.MapUpdateDto;
 import com.goorm.ticker.waitlist.entity.Status;
 import com.goorm.ticker.waitlist.entity.WaitList;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -16,9 +17,13 @@ public interface WaitListRepository extends JpaRepository<WaitList, Long> {
     Integer findMaxWaitingNumberByRestaurantId(@Param("restaurantId") Long restaurantId);
 
     Optional<WaitList> findByUser_IdAndStatus(Long userId, Status status);
+
     boolean existsByRestaurant_RestaurantIdAndUser_IdAndStatus(Long restaurantId, Long userId, Status status);
+
     long countByRestaurant_RestaurantIdAndWaitingNumberLessThanAndStatus(Long restaurantId, int waitingNumber, Status status);
+
     Optional<WaitList> findByRestaurant_RestaurantIdAndUser_IdAndStatus(Long restaurantId, Long userId, Status status);
+
     @Query("SELECT COUNT(w) FROM WaitList w WHERE w.restaurant.id = :restaurantId AND w.status = 'WAITING'")
     long countTotalWaitingByRestaurantId(@Param("restaurantId") Long restaurantId);
 
@@ -43,5 +48,10 @@ public interface WaitListRepository extends JpaRepository<WaitList, Long> {
 """)
     List<MapUpdateDto> findRestaurantsWithWaiting(@Param("restaurantIds") List<Long> restaurantIds);
 
+    @Query("SELECT w FROM WaitList w WHERE w.restaurant.restaurantId = :restaurantId AND w.status = 'WAITING' ORDER BY w.waitingNumber ASC")
+    List<WaitList> findRestaurantWaitingList(@Param("restaurantId") Long restaurantId);
 
+    @Query("SELECT DISTINCT w.restaurant.restaurantId FROM WaitList w WHERE w.status = 'WAITING'")
+    List<Long> findAllDistinctRestaurantIds();
 }
+
