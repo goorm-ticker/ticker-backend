@@ -148,7 +148,7 @@ public class MapService {
             .placeUrl(restaurant.getPlaceUrl())
             .build();
       
-       List<WaitList> waitList = waitListRepository.findRestaurantWaitngList(restaurantId);
+       List<WaitList> waitList = waitListRepository.findRestaurantWaitingList(restaurantId);
 
         Map<Long,Integer> wait = new HashMap<>();
         for(int i = 0 ; i < waitList.size() ; i++){
