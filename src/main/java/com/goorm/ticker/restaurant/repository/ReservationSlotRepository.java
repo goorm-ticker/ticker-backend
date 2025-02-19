@@ -1,6 +1,7 @@
 package com.goorm.ticker.restaurant.repository;
 
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,4 +29,7 @@ public interface ReservationSlotRepository extends JpaRepository<ReservationSlot
 	@Query("UPDATE ReservationSlot rs SET rs.availablePartySize = rs.availablePartySize + :partySize "
 		+ "WHERE rs.id = :slotId")
 	void increaseAvailablePartySize(@Param("slotId") Long slotId, @Param("partySize") int partySize);
+
+	@Query("SELECT s FROM ReservationSlot s WHERE s.restaurant.restaurantId = :restaurantId")
+	List<ReservationSlot> findByRestaurantId(@Param("restaurantId") Long restaurantId);
 }
