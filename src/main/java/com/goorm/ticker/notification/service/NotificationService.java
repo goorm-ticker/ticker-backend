@@ -82,6 +82,11 @@ public class NotificationService {
                 message = "예약이 취소되었습니다.";
                 status = "CANCELLED";
             }
+            case ENTRY_POSSIBLE -> {
+                title = "입장 가능 알림";
+                message = "입장 순번이 되었습니다. 매장으로 와주세요";
+                status = "ENTERED";
+            }
             default -> {
                 log.warn("알 수 없는 알림 타입: {}", notificationType);
                 return;
