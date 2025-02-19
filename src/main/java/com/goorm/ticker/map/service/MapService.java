@@ -57,14 +57,14 @@ public class MapService {
         단일 식당 조회 시, 현재 조회 중인 음식점들의 대기열과 본인의 대기열을 제공
          */
         if(restaurantId.size()==1){
-            WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.updateMyWaitingInfo(restaurantId.get(0), userId);
+            WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.getUserWaitingPosition(restaurantId.get(0), userId);
 
             dto.get(0).setMyWaiting(waitingInfoResponseDto.waitingCount(),waitingInfoResponseDto.estimatedWaitTime());
         }
         log.info("음식점 등록 및 대기열 조회 성공");
         try {
             dto.forEach(d -> {
-                WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.updateMyWaitingInfo(d.getRestaurantId(), userId);
+                WaitingInfoResponseDto waitingInfoResponseDto = waitingPositionService.getUserWaitingPosition(d.getRestaurantId(), userId);
                 d.setMyWaiting(waitingInfoResponseDto.waitingCount(), waitingInfoResponseDto.estimatedWaitTime());
             });
             emitter.send(SseEmitter.event()
