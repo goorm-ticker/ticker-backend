@@ -11,8 +11,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class ReservationCreateRequest {
-	@NotNull(message = "사용자 ID는 필수입니다.")
-	private Long userId;
 
 	@NotNull(message = "음식점 ID는 필수입니다.")
 	private Long restaurantId;
@@ -31,7 +29,6 @@ public class ReservationCreateRequest {
 		LocalDate reservationDate,
 		int partySize) {
 		ReservationCreateRequest request = new ReservationCreateRequest();
-		request.userId = userId;
 		request.restaurantId = restaurantId;
 		request.reservationDate = reservationDate;
 		request.reservationTime = reservationTime;
