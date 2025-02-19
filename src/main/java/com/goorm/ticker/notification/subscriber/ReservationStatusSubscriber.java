@@ -7,6 +7,7 @@ import com.goorm.ticker.notification.service.NotificationService;
 import com.goorm.ticker.reservation.Entity.Reservation;
 import com.goorm.ticker.reservation.repository.ReservationRepository;
 import com.goorm.ticker.reservation.service.ReservationService;
+import com.goorm.ticker.waitlist.service.CompleteWaitingService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,51 +25,77 @@ public class ReservationStatusSubscriber implements MessageListener {
     private final ObjectMapper objectMapper;
     private final ReservationService reservationService;
     private final ReservationRepository reservationRepository;
+    private final CompleteWaitingService completeWaitingService;
 
     @Override
     public synchronized void onMessage(Message message, byte[] pattern) {
         String messageBody = new String(message.getBody(), StandardCharsets.UTF_8);
-        log.info("예약 상태 변경 감지: {}", messageBody);
 
+        JsonNode jsonNode = null;
         try {
-            JsonNode jsonNode = objectMapper.readTree(messageBody);
-            if (jsonNode.get("reservationId") == null) {
-                log.error("reservationId가 null입니다. 메시지: {}", messageBody);
+            jsonNode = objectMapper.readTree(messageBody);
+
+            if (jsonNode == null) {
+                log.error("JSON 변환 실패");
                 return;
             }
+        } catch (Exception e) {
+            log.error("JSON 파싱 오류 발생");
+            return;
+        }
 
-            Long reservationId = jsonNode.get("reservationId").asLong();
-            String status = jsonNode.get("status").asText();
+        if (!jsonNode.hasNonNull("reservationId") || !jsonNode.hasNonNull("status")) {
+            log.error("필수 필드 누락");
+            return;
+        }
 
+        Long reservationId = jsonNode.get("reservationId").asLong();
+        String status = jsonNode.get("status").asText();
+
+        processReservationStatusChange(reservationId, status);
+    }
+
+    private void processReservationStatusChange(Long reservationId, String status) {
+        try {
             Thread.sleep(500); // DB 반영 대기
 
             Reservation reservation = reservationRepository.findById(reservationId)
                     .orElseThrow(() -> {
-                        log.error("예약을 찾을 수 없습니다. reservationId={}", reservationId);
                         return new EntityNotFoundException("예약을 찾을 수 없습니다.");
                     });
 
-            log.info("기존 상태: {}, 새로운 상태: {}", reservation.getLastNotificationStatus(), status);
-
             switch (status) {
-                case "CANCELLED" -> {
-                    log.info("예약 취소 감지: reservationId={}", reservationId);
+                case "CANCELLED":
                     notificationService.sendReservationNotification(reservationId, NotificationType.RESERVATION_CANCEL);
-                }
-                case "CONFIRMED" -> {
-                    log.info("예약 확정 감지: reservationId={}", reservationId);
+                    break;
+                case "CONFIRMED":
                     notificationService.sendReservationNotification(reservationId, NotificationType.RESERVATION_CONFIRMATION);
-                }
-                default -> log.warn("알 수 없는 예약 상태: {}", status);
+                    break;
+                case "ENTERED":
+                    handleEnteredReservation(reservation);
+                    break;
+                default:
+                    log.warn("알 수 없는 예약 상태: {}", status);
             }
 
             reservation.updateLastNotificationStatus(status);
             reservationRepository.save(reservation);
 
             log.info("상태 업데이트 완료: reservationId={}, newStatus={}", reservationId, status);
-
         } catch (Exception e) {
-            log.error("예약 상태 변경 메시지 처리 오류: {}", e.getMessage(), e);
+            log.error("예약 상태 변경 메시지 처리 오류");
+        }
+    }
+
+    private void handleEnteredReservation(Reservation reservation) {
+        try {
+            Long userId = reservation.getUser().getId();
+
+            completeWaitingService.completeWaiting(userId);
+
+            notificationService.sendEntryPossibleNotification(userId);
+        } catch (Exception e) {
+            log.error("오류 발생");
         }
     }
 }

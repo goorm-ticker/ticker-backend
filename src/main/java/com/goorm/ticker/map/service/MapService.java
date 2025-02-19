@@ -147,8 +147,9 @@ public class MapService {
             .waiting(waiting)
             .placeUrl(restaurant.getPlaceUrl())
             .build();
+      
+       List<WaitList> waitList = waitListRepository.findRestaurantWaitngList(restaurantId);
 
-        List<WaitList> waitList = waitListRepository.findRestaurantWaitngList(restaurantId);
         Map<Long,Integer> wait = new HashMap<>();
         for(int i = 0 ; i < waitList.size() ; i++){
             Long userId = waitList.get(i).getUser().getId();

@@ -5,6 +5,7 @@ import com.goorm.ticker.notification.entity.NotificationType;
 import com.goorm.ticker.notification.publisher.ReservationStatusPublisher;
 import com.goorm.ticker.notification.repository.NotificationRepository;
 import com.goorm.ticker.notification.service.FCMService;
+import com.goorm.ticker.waitlist.service.CompleteWaitingService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -42,6 +43,7 @@ public class ReservationService {
 
 	private final FCMService fcmService;
 	private final NotificationRepository notificationRepository;
+	private final CompleteWaitingService completeWaitingService;
 
 
 	@Transactional
@@ -63,8 +65,6 @@ public class ReservationService {
 
 		User user = userRepository.findById(request.getUserId())
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
-		//User user = userRepository.findById(userId)
-		//	.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
 		ReservationStatus initialStatus = switch (restaurant.getReservationPolicy()) {
 			case INSTANT_CONFIRMATION -> ReservationStatus.CONFIRMED;
@@ -190,7 +190,13 @@ public class ReservationService {
 	}
 
 	private void handleEntry(Reservation reservation) {
+		log.info("예약 상태 업데이트 - ENTERED: reservationId={}", reservation.getReservationId());
+
 		reservation.enterReservation();
+
+		completeWaitingService.completeWaiting(reservation.getUser().getId());
+
+		reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), "ENTERED");
 	}
 
 	private void handleConfirmation(Reservation reservation) {
