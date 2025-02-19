@@ -10,14 +10,19 @@ public enum RestaurantFixture {
 		"37.5665",
 		"126.9780",
 		50,
-		ReservationPolicy.INSTANT_CONFIRMATION),
+		ReservationPolicy.INSTANT_CONFIRMATION,
+		"test-url"
+	),
+
 	RESTAURANT_FIXTURE_2(
 		2L,
 		"Test Restaurant 2",
 		"37.5675",
 		"126.9790",
 		30,
-		ReservationPolicy.MANUAL_CONFIRMATION);
+		ReservationPolicy.MANUAL_CONFIRMATION,
+		"test-url"
+	);
 
 	private final Long restaurantId;
 	private final String name;
@@ -25,19 +30,23 @@ public enum RestaurantFixture {
 	private final String y;
 	private final Integer maxWaiting;
 	private final ReservationPolicy reservationPolicy;
+	private final String placeUrl;
 
-	RestaurantFixture(Long restaurantId,String name, String x, String y, Integer maxWaiting,
-		ReservationPolicy reservationPolicy) {
+	RestaurantFixture(Long restaurantId,String name, String x, String y,
+					  Integer maxWaiting,
+					  ReservationPolicy reservationPolicy,
+					  String placeUrl) {
 		this.restaurantId = restaurantId;
 		this.name = name;
 		this.x = x;
 		this.y = y;
 		this.maxWaiting = maxWaiting;
 		this.reservationPolicy = reservationPolicy;
+		this.placeUrl = placeUrl;
 	}
 
 	public Restaurant createRestaurant() {
-		return Restaurant.of(restaurantId, name, x, y, maxWaiting, reservationPolicy);
+		return Restaurant.of(restaurantId, name, x, y, maxWaiting, reservationPolicy, placeUrl);
 	}
 
 }
