@@ -89,10 +89,12 @@ public class ReservationService {
 		log.info("예약 성공: reservationId={}", reservation.getReservationId());
 
 		if (restaurant.getReservationPolicy() == ReservationPolicy.INSTANT_CONFIRMATION) {
+			slot.updateAvailablePartySize(slot.getAvailablePartySize() - request.getPartySize());
+			reservationSlotRepository.saveAndFlush(slot);
 			// 즉시 확정 예약 시 CONFIRM 알림 전송
 			reservationStatusPublisher.publishReservationStatus(reservation.getReservationId(), "CONFIRMED");
 			// 원자적으로 가용 인원 감소
-			reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
+			// reservationSlotRepository.decreaseAvailablePartySize(slot.getId(), request.getPartySize());
 		}
 
 		log.info("[O] 예약 성공 - 유저 ID: {} | 예약 ID: {} | 남은 예약 가능 인원: {}",
@@ -174,8 +176,11 @@ public class ReservationService {
 
 		if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
 			// 원자적으로 가용 인원 증가
-			reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
-				reservation.getPartySize());
+			// reservationSlotRepository.increaseAvailablePartySize(reservation.getReservationSlot().getId(),
+			// 	reservation.getPartySize());
+			ReservationSlot slot = reservation.getReservationSlot();
+			slot.updateAvailablePartySize(slot.getAvailablePartySize() - reservation.getPartySize());
+			reservationSlotRepository.saveAndFlush(slot);
 		}
 		reservation.cancelReservation();
 
