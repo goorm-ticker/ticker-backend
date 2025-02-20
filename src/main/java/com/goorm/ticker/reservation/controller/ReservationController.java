@@ -21,6 +21,8 @@ import com.goorm.ticker.reservation.service.ReservationService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -33,7 +35,10 @@ import lombok.RequiredArgsConstructor;
 public class ReservationController {
 	private final ReservationService reservationService;
 
-	@Operation(summary = "예약 생성", description = "새로운 예약을 생성합니다.")
+	@Operation(
+		summary = "예약 생성",
+		description = "새로운 예약을 생성합니다."
+	)
 	@PostMapping
 	public ResponseEntity<ReservationCreateResponse> createReservation(
 		@Valid @RequestBody ReservationCreateRequest request,
@@ -48,7 +53,17 @@ public class ReservationController {
 		return ResponseEntity.ok(response);
 	}
 
-	@Operation(summary = "예약 상태 변경", description = "예약을 취소하거나 상태를 변경합니다.")
+	@Operation(
+		summary = "예약 상태 변경",
+		description = "예약을 취소하거나 상태를 변경합니다.",
+		requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+			content = @Content(
+				mediaType = "application/json",
+				examples = @ExampleObject(value = "{ \"status\": \"CANCELLED\" }")
+			)
+		)
+	)
+
 	@PatchMapping("/{reservationId}")
 	public ResponseEntity<ReservationCreateResponse> updateReservation(
 		@Parameter(description = "예약 ID", required = true) @PathVariable Long reservationId,
