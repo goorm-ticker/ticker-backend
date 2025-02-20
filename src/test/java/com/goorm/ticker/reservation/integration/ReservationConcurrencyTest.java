@@ -18,7 +18,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -106,15 +105,6 @@ public class ReservationConcurrencyTest {
 		assertThat(userRepository.count()).isEqualTo(THREAD_COUNT);
 	}
 
-	@AfterEach
-	void afterEach() {
-		notificationRepository.deleteAll();
-		reservationRepository.deleteAll();
-		reservationSlotRepository.deleteAll();
-		restaurantRepository.deleteAll();
-		userRepository.deleteAll();
-	}
-
 	@Test
 	@DisplayName("50명 유저 동시 예약 테스트 - 비관적 락 적용")
 	void testConcurrentReservationsWithoutLock() throws InterruptedException {
@@ -122,7 +112,7 @@ public class ReservationConcurrencyTest {
 		CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
 		long startTime = System.currentTimeMillis();
 		Long restaurantId = restaurantInstant.getRestaurantId();
-		LocalTime reservationTime = LocalTime.of(12, 0);
+		LocalTime reservationTime = LocalTime.of(12, 0, 0);
 		LocalDate reservationDate = LocalDate.now();
 
 		AtomicInteger successCount = new AtomicInteger(0); // 성공한 예약 수
