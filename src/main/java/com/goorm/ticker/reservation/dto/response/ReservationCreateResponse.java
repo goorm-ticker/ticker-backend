@@ -3,7 +3,6 @@ package com.goorm.ticker.reservation.dto.response;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.goorm.ticker.reservation.Entity.ReservationStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,7 +17,6 @@ public class ReservationCreateResponse {
 	private String username;
 	@Schema(example = "2025-03-28")
 	private LocalDate reservationDate;
-	@JsonFormat(pattern = "HH:mm:ss")
 	@Schema(description = "예약 시간 (HH:mm:ss 형식)", example = "12:00:00")
 	private LocalTime reservationTime;
 	private int partySize;
